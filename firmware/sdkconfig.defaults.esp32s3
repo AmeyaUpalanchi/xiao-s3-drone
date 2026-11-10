@@ -1,4 +1,4 @@
-# ---- Seeed XIAO ESP32-S3 (Sense) on Max Imagination drone PCB1 ----
+# ---- Seeed XIAO ESP32-S3 (Sense) on The Drone Community drone PCB1 ----
 CONFIG_FREERTOS_UNICORE=n
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
 CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240=y

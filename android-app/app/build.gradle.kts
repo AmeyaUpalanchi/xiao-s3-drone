@@ -8,7 +8,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.maximagination.drone"
+        applicationId = "com.thedronecommunity.drone"
         minSdk = 26
         targetSdk = 36
         versionCode = 20

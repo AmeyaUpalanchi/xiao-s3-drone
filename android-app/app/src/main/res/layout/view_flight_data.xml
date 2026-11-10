@@ -1,35 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <TextView android:id="@+id/pitch_label" style="@style/HudCaption"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="@string/pitch_label" />
-    <TextView android:id="@+id/pitch" style="@style/HudLabel"
-        android:layout_width="34dp" android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp" android:gravity="end" android:fontFeatureSettings="tnum"
-        android:text="@string/pitch" />
-
-    <TextView android:id="@+id/roll_label" style="@style/HudCaption"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="@string/roll_label" />
-    <TextView android:id="@+id/roll" style="@style/HudLabel"
-        android:layout_width="34dp" android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp" android:gravity="end" android:fontFeatureSettings="tnum"
-        android:text="@string/roll" />
-
-    <TextView android:id="@+id/thrust_label" style="@style/HudCaption"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="@string/thrust_label" />
-    <TextView android:id="@+id/thrust" style="@style/HudLabel"
-        android:layout_width="42dp" android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp" android:gravity="end" android:fontFeatureSettings="tnum"
-        android:text="@string/thrust" />
-
-    <TextView android:id="@+id/yaw_label" style="@style/HudCaption"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="@string/yaw_label" />
-    <TextView android:id="@+id/yaw" style="@style/HudLabel"
-        android:layout_width="40dp" android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp" android:gravity="end" android:fontFeatureSettings="tnum"
+    <TextView android:id="@+id/thrust_label" style="@style/TelemetryText"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/thrust_label" />
+    <TextView android:id="@+id/thrust" style="@style/TelemetryText" android:textColor="@color/brand_on_surface"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="4dp"
+        android:layout_marginEnd="14dp" android:text="@string/thrust" />
+    <TextView android:id="@+id/roll_label" style="@style/TelemetryText"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/roll_label" />
+    <TextView android:id="@+id/roll" style="@style/TelemetryText" android:textColor="@color/brand_on_surface"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="4dp"
+        android:layout_marginEnd="14dp" android:text="@string/roll" />
+    <TextView android:id="@+id/pitch_label" style="@style/TelemetryText"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/pitch_label" />
+    <TextView android:id="@+id/pitch" style="@style/TelemetryText" android:textColor="@color/brand_on_surface"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="4dp"
+        android:layout_marginEnd="14dp" android:text="@string/pitch" />
+    <TextView android:id="@+id/yaw_label" style="@style/TelemetryText"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/yaw_label" />
+    <TextView android:id="@+id/yaw" style="@style/TelemetryText" android:textColor="@color/brand_on_surface"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="4dp"
         android:text="@string/yaw" />
 </merge>

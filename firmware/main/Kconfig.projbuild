@@ -18,7 +18,7 @@ menu "ESPDrone Config"
     endchoice
 
     config XIAO_ESP32S3_BOARD
-        bool "Seeed XIAO ESP32-S3 (Sense) on Max Imagination PCB1"
+        bool "Seeed XIAO ESP32-S3 (Sense) on The Drone Community PCB1"
         depends on IDF_TARGET_ESP32S3 && TARGET_ESP32_S2_DRONE_V1_2
         default y
         help

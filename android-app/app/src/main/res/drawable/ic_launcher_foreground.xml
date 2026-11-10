@@ -1,17 +1,10 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <group android:scaleX="0.62" android:scaleY="0.62" android:pivotX="54" android:pivotY="54">
+    <group android:scaleX="0.6" android:scaleY="0.6" android:pivotX="54" android:pivotY="54">
         <path android:strokeColor="#FFFFFFFF" android:strokeWidth="6" android:strokeLineCap="round"
-            android:pathData="M34,34L74,74M74,34L34,74" />
-        <path android:strokeColor="@color/brand_primary" android:strokeWidth="5" android:fillColor="#00000000"
-            android:pathData="M30,30m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0" />
-        <path android:strokeColor="@color/brand_primary" android:strokeWidth="5" android:fillColor="#00000000"
-            android:pathData="M78,30m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0" />
-        <path android:strokeColor="@color/brand_secondary" android:strokeWidth="5" android:fillColor="#00000000"
-            android:pathData="M30,78m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0" />
-        <path android:strokeColor="@color/brand_secondary" android:strokeWidth="5" android:fillColor="#00000000"
-            android:pathData="M78,78m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0" />
-        <path android:fillColor="#FFFFFFFF" android:pathData="M54,54m-10,0a10,10 0,1 1,20 0a10,10 0,1 1,-20 0" />
-        <path android:fillColor="@color/brand_primary" android:pathData="M54,54m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+            android:pathData="M36,36L72,72M72,36L36,72" />
+        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:fillColor="#00000000"
+            android:pathData="M30,30m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0M78,30m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0M30,78m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0M78,78m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0" />
+        <path android:fillColor="@color/brand_primary" android:pathData="M54,54m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
     </group>
 </vector>

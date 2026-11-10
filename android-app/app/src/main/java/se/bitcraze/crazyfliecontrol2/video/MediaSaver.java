@@ -18,10 +18,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-/** Writes photos and videos to the shared gallery (Pictures/ & Movies/MaxImagination). */
+/** Writes photos and videos to the shared gallery (Pictures/ & Movies/DroneCommunity). */
 public final class MediaSaver {
 
-    public static final String ALBUM = "MaxImagination";
+    public static final String ALBUM = "DroneCommunity";
 
     private MediaSaver() {}
 

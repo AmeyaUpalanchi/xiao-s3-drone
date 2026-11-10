@@ -1,7 +1,7 @@
 /*
  * camera_stream.c - MJPEG live view + photo capture for the XIAO ESP32-S3 Sense
  *
- * Copyright (C) 2026 Max Imagination
+ * Copyright (C) 2026 The Drone Community
  * Licensed under the GNU General Public License v3 (same as ESP-Drone).
  */
 #include <string.h>

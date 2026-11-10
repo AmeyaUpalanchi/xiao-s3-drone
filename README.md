@@ -1,4 +1,4 @@
-# Max Imagination XIAO ESP32-S3 Drone
+# The Drone Community: XIAO ESP32-S3 Drone
 
 Two projects live here:
 
@@ -65,4 +65,4 @@ cd android-app
 ```
 
 Brand colours are all in `android-app/app/src/main/res/values/colors.xml`.
-Photos go to `Pictures/MaxImagination`, videos to `Movies/MaxImagination`.
+Photos go to `Pictures/DroneCommunity`, videos to `Movies/DroneCommunity`.

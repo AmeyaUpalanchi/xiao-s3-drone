@@ -85,6 +85,8 @@ import com.MobileAnarchy.Android.Widgets.Joystick.JoystickView;
 import com.espressif.espdrone.android.R;
 
 import android.graphics.Bitmap;
+import android.content.res.ColorStateList;
+import com.google.android.material.button.MaterialButton;
 import android.view.WindowManager;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -134,7 +136,7 @@ public class MainActivity extends EspActivity {
     private int mSoundConnect;
     private int mSoundDisconnect;
 
-    private ImageButton mToggleConnectButton;
+    private MaterialButton mToggleConnectButton;
     private ImageButton mRingEffectButton;
     private ImageButton mHeadlightButton;
     private ImageButton mBuzzerSoundButton;
@@ -152,11 +154,9 @@ public class MainActivity extends EspActivity {
     private View mVideoPlaceholder;
     private TextView mVideoPlaceholderTitle;
     private TextView mVideoPlaceholderSubtitle;
-    private ImageButton mPhotoButton;
-    private ImageButton mRecordButton;
-    private ImageButton mLiveButton;
-    private TextView mRecordLabel;
-    private TextView mLiveLabel;
+    private MaterialButton mPhotoButton;
+    private MaterialButton mRecordButton;
+    private MaterialButton mLiveButton;
     private TextView mChipLive;
     private TextView mChipRec;
     private DroneStatusPoller mStatusPoller;
@@ -217,7 +217,7 @@ public class MainActivity extends EspActivity {
         mGamepadController.setDefaultPreferenceValues(getResources());
 
         //initialize buttons
-        mToggleConnectButton = (ImageButton) findViewById(R.id.imageButton_connect);
+        mToggleConnectButton = findViewById(R.id.imageButton_connect);
         initializeMenuButtons();
 
         mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
@@ -279,8 +279,6 @@ public class MainActivity extends EspActivity {
         mPhotoButton = findViewById(R.id.button_photo);
         mRecordButton = findViewById(R.id.button_record);
         mLiveButton = findViewById(R.id.button_live);
-        mRecordLabel = findViewById(R.id.button_record_label);
-        mLiveLabel = findViewById(R.id.button_live_label);
         mChipLive = findViewById(R.id.chip_live);
         mChipRec = findViewById(R.id.chip_rec);
 
@@ -502,19 +500,23 @@ public class MainActivity extends EspActivity {
         }
 
         boolean cameraUsable = mCameraPresent || mStreamConnected;
+        int surface = ContextCompat.getColor(this, R.color.brand_surface_high);
+        int accent = ContextCompat.getColor(this, R.color.brand_primary);
+        int danger = ContextCompat.getColor(this, R.color.status_danger);
+
         mLiveButton.setEnabled(cameraUsable || mLiveWanted);
-        mLiveButton.setBackgroundResource(mLiveWanted ? R.drawable.bg_hud_button_active : R.drawable.bg_hud_button);
-        mLiveLabel.setText(mLiveWanted ? R.string.button_live : R.string.button_live_off);
-        mLiveButton.setAlpha(mLiveButton.isEnabled() ? 1f : 0.45f);
+        mLiveButton.setText(mLiveWanted ? R.string.button_live_off : R.string.button_live);
+        mLiveButton.setBackgroundTintList(ColorStateList.valueOf(mLiveWanted ? accent : surface));
+        mLiveButton.setAlpha(mLiveButton.isEnabled() ? 1f : 0.4f);
 
         mPhotoButton.setEnabled(cameraUsable);
-        mPhotoButton.setAlpha(cameraUsable ? 1f : 0.45f);
+        mPhotoButton.setAlpha(cameraUsable ? 1f : 0.4f);
 
         mRecordButton.setEnabled(recording || mStreamConnected);
-        mRecordButton.setAlpha(mRecordButton.isEnabled() ? 1f : 0.45f);
-        mRecordButton.setImageResource(recording ? R.drawable.ic_stop : R.drawable.ic_record);
-        mRecordButton.setBackgroundResource(recording ? R.drawable.bg_record_button_active : R.drawable.bg_record_button);
-        mRecordLabel.setText(recording ? R.string.button_stop : R.string.button_record);
+        mRecordButton.setAlpha(mRecordButton.isEnabled() ? 1f : 0.4f);
+        mRecordButton.setIconResource(recording ? R.drawable.ic_stop_white : R.drawable.ic_record);
+        mRecordButton.setText(recording ? R.string.button_stop : R.string.button_record);
+        mRecordButton.setBackgroundTintList(ColorStateList.valueOf(recording ? danger : surface));
 
         mChipLive.setVisibility(showingVideo ? View.VISIBLE : View.GONE);
         mChipRec.setVisibility(recording ? View.VISIBLE : View.GONE);
@@ -1101,23 +1103,22 @@ public class MainActivity extends EspActivity {
     }
 
     public void setConnectionButtonConnected() {
-        setConnectionButtonBackground(R.drawable.custom_button_connected);
+        setConnectionButtonState(true);
     }
 
     public void setConnectionButtonConnectedBle() {
-        setConnectionButtonBackground(R.drawable.custom_button_connected_ble);
+        setConnectionButtonState(true);
     }
 
     public void setConnectionButtonDisconnected() {
-        setConnectionButtonBackground(R.drawable.custom_button);
+        setConnectionButtonState(false);
     }
 
-    public void setConnectionButtonBackground(final int drawable) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mToggleConnectButton.setBackgroundDrawable(getResources().getDrawable(drawable));
-            }
+    private void setConnectionButtonState(final boolean connected) {
+        runOnUiThread(() -> {
+            mToggleConnectButton.setText(connected ? R.string.menu_disconnect : R.string.menu_connect);
+            mToggleConnectButton.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this,
+                    connected ? R.color.brand_surface_high : R.color.brand_primary)));
         });
     }
 

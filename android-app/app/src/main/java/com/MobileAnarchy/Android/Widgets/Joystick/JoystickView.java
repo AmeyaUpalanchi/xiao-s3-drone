@@ -112,16 +112,16 @@ public class JoystickView extends View {
 
         float density = getResources().getDisplayMetrics().density;
         bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bgPaint.setColor(Color.WHITE);
-        bgPaint.setAlpha(150);
-        bgPaint.setStrokeWidth(2.5f * density);
+        bgPaint.setColor(androidx.core.content.ContextCompat.getColor(getContext(),
+                com.espressif.espdrone.android.R.color.stick_ring));
+        bgPaint.setStrokeWidth(2f * density);
         bgPaint.setStyle(Paint.Style.STROKE);
 
         handlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         handlePaint.setColor(androidx.core.content.ContextCompat.getColor(getContext(),
-                com.espressif.espdrone.android.R.color.brand_primary));
+                com.espressif.espdrone.android.R.color.stick_handle));
         handlePaint.setStrokeWidth(1);
-        handlePaint.setAlpha(190);
+        handlePaint.setAlpha(230);
         handlePaint.setStyle(Paint.Style.FILL_AND_STROKE);
 
         innerPadding = 10;
