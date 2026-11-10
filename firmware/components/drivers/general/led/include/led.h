@@ -29,7 +29,11 @@
 #define LED_POL_NEG 1
 
 #define LED_GPIO_BLUE  CONFIG_LED_PIN_BLUE
+#ifdef CONFIG_XIAO_ESP32S3_BOARD
+#define LED_POL_BLUE   LED_POL_NEG   // XIAO user LED (GPIO21) is active low
+#else
 #define LED_POL_BLUE   LED_POL_POS
+#endif
 #define LED_GPIO_GREEN CONFIG_LED_PIN_GREEN  //different from pcb design
 #define LED_POL_GREEN  LED_POL_POS
 #define LED_GPIO_RED   CONFIG_LED_PIN_RED

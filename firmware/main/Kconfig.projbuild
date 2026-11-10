@@ -17,6 +17,17 @@ menu "ESPDrone Config"
 
     endchoice
 
+    config XIAO_ESP32S3_BOARD
+        bool "Seeed XIAO ESP32-S3 (Sense) on Max Imagination PCB1"
+        depends on IDF_TARGET_ESP32S3 && TARGET_ESP32_S2_DRONE_V1_2
+        default y
+        help
+            Pin map for the XIAO ESP32-S3 drone PCB (Netlist_PCB1_2026-11-10):
+            M1=D3(GPIO4) M2=D7(GPIO44) M3=D2(GPIO3) M4=D0(GPIO1),
+            I2C SDA=D4(GPIO5) SCL=D5(GPIO6), VBAT sense=D1(GPIO2, 1:2 divider),
+            MPU6050 INT not connected (polled at 1 kHz).
+            Keeps the ESP32-S2/S3 drone flight tuning.
+
     choice
         prompt "extend board version"
         default EXT_AUTO_DETECT
@@ -81,10 +92,13 @@ menu "ESPDrone Config"
 
         config BUZZER_ON
             bool "enable buzzer to play sound"
+            default n if XIAO_ESP32S3_BOARD
             default y
 
         config BUZ1_PIN_POS
             int "BUZ1_PIN_POS GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default -1 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 27 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -96,6 +110,8 @@ menu "ESPDrone Config"
 
         config BUZ2_PIN_NEG
             int "BUZ2_PIN_NEG GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default -1 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 26 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -110,6 +126,8 @@ menu "ESPDrone Config"
     menu "sensors config"
         config I2C0_PIN_SDA
             int "I2C0_PIN_SDA GPIO number"
+            range 0 48 if XIAO_ESP32S3_BOARD
+            default 5 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 21 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -121,6 +139,8 @@ menu "ESPDrone Config"
 
         config I2C0_PIN_SCL
             int "I2C0_PIN_SCL GPIO number"
+            range 0 48 if XIAO_ESP32S3_BOARD
+            default 6 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 22 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -132,6 +152,8 @@ menu "ESPDrone Config"
 
         config I2C1_PIN_SDA
             int "I2C1_PIN_SDA GPIO number"
+            range 0 48 if XIAO_ESP32S3_BOARD
+            default 5 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 16 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -143,6 +165,8 @@ menu "ESPDrone Config"
 
         config I2C1_PIN_SCL
             int "I2C1_PIN_SCL GPIO number"
+            range 0 48 if XIAO_ESP32S3_BOARD
+            default 6 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 17 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -154,6 +178,8 @@ menu "ESPDrone Config"
 
         config SPI_PIN_MISO
             int "SPI_PIN_MISO GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default 8 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 12 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -165,6 +191,8 @@ menu "ESPDrone Config"
 
         config SPI_PIN_MOSI
             int "SPI_PIN_MOSI GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default 9 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 13 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -176,6 +204,8 @@ menu "ESPDrone Config"
 
         config SPI_PIN_CLK
             int "SPI_PIN_CLK GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default 7 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 14 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -187,6 +217,8 @@ menu "ESPDrone Config"
 
         config SPI_PIN_CS0
             int "SPI_PIN_CS0 GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default 43 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 15 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -198,6 +230,8 @@ menu "ESPDrone Config"
 
         config MPU_PIN_INT
             int "MPU_PIN_INT GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default -1 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 19 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -209,6 +243,8 @@ menu "ESPDrone Config"
 
         config ADC1_PIN
             int "EXT01_PIN GPIO number"
+            range 1 10 if XIAO_ESP32S3_BOARD
+            default 2 if XIAO_ESP32S3_BOARD
             range 32 39 if TARGET_ESPLANE_V1
             default 35 if TARGET_ESPLANE_V1
             range 1 10 if TARGET_ESPLANE_V2_S2
@@ -220,6 +256,8 @@ menu "ESPDrone Config"
 
         config EXT01_PIN
             int "EXT01_PIN GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default 43 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 34 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -233,6 +271,8 @@ menu "ESPDrone Config"
     menu "led config"
         config LED_PIN_BLUE
             int "LED_PIN_BLUE GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default 21 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 18 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -244,6 +284,8 @@ menu "ESPDrone Config"
 
         config LED_PIN_GREEN
             int "LED_PIN_GREEN GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default -1 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 5 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -255,6 +297,8 @@ menu "ESPDrone Config"
 
         config LED_PIN_RED
             int "LED_PIN_RED GPIO number"
+            range -1 48 if XIAO_ESP32S3_BOARD
+            default -1 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 23 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -264,6 +308,48 @@ menu "ESPDrone Config"
             help
                 GPIO number (IOxx) LED_PIN_RED
 
+    endmenu
+
+
+    menu "camera (XIAO ESP32-S3 Sense)"
+        config DRONE_CAMERA
+            bool "Enable camera live stream (MJPEG over Wi-Fi)"
+            depends on IDF_TARGET_ESP32S3
+            default y if XIAO_ESP32S3_BOARD
+            default n
+            help
+                Starts an HTTP server on the drone access point:
+                  http://192.168.43.42/status   JSON: camera present, battery V and %
+                  http://192.168.43.42/capture  single JPEG photo
+                  http://192.168.43.42:81/stream MJPEG live stream
+                If no camera is attached (non-Sense XIAO) the drone still flies
+                and /status reports "camera":false.
+
+        choice DRONE_CAM_FRAME_SIZE
+            prompt "Stream resolution"
+            depends on DRONE_CAMERA
+            default DRONE_CAM_FRAME_VGA
+            config DRONE_CAM_FRAME_QVGA
+                bool "QVGA 320x240"
+            config DRONE_CAM_FRAME_VGA
+                bool "VGA 640x480"
+            config DRONE_CAM_FRAME_SVGA
+                bool "SVGA 800x600"
+            config DRONE_CAM_FRAME_HD
+                bool "HD 1280x720"
+        endchoice
+
+        config DRONE_CAM_JPEG_QUALITY
+            int "JPEG quality (lower number = better quality, bigger frames)"
+            depends on DRONE_CAMERA
+            range 6 63
+            default 12
+
+        config DRONE_CAM_MAX_FPS
+            int "Max stream frame rate"
+            depends on DRONE_CAMERA
+            range 1 30
+            default 20
     endmenu
 
     menu "motors config"
@@ -281,6 +367,8 @@ menu "ESPDrone Config"
 
         config MOTOR01_PIN
             int "MOTOR01_PIN GPIO number"
+            range 0 48 if XIAO_ESP32S3_BOARD
+            default 4 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 4 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -292,6 +380,8 @@ menu "ESPDrone Config"
 
         config MOTOR02_PIN
             int "MOTOR02_PIN GPIO number"
+            range 0 48 if XIAO_ESP32S3_BOARD
+            default 44 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 33 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -303,6 +393,8 @@ menu "ESPDrone Config"
 
         config MOTOR03_PIN
             int "MOTOR03_PIN GPIO number"
+            range 0 48 if XIAO_ESP32S3_BOARD
+            default 3 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 32 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2
@@ -314,6 +406,8 @@ menu "ESPDrone Config"
 
         config MOTOR04_PIN
             int "MOTOR04_PIN GPIO number"
+            range 0 48 if XIAO_ESP32S3_BOARD
+            default 1 if XIAO_ESP32S3_BOARD
             range 0 34 if TARGET_ESPLANE_V1
             default 25 if TARGET_ESPLANE_V1
             range 0 43 if TARGET_ESPLANE_V2_S2

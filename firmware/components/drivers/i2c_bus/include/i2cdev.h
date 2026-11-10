@@ -32,7 +32,11 @@
 #define I2CDEV_NO_MEM_ADDR  0xFF
 
 typedef I2cDrv    I2C_Dev;
+#ifdef CONFIG_XIAO_ESP32S3_BOARD
+#define I2C1_DEV  &sensorsBus   // CN5/CN6 are on the same SDA/SCL as the MPU6050
+#else
 #define I2C1_DEV  &deckBus
+#endif
 #define I2C0_DEV  &sensorsBus
 
 // For compatibility

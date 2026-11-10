@@ -28,6 +28,11 @@
 #ifndef PM_H_
 #define PM_H_
 
+#include <stdint.h>
+
+/** Battery state of charge 0..100 % (1S LiPo curve, filtered). */
+uint8_t pmGetBatteryPercent(void);
+
 #include "esp_idf_version.h"
 #include "syslink.h"
 #include "driver/adc.h"

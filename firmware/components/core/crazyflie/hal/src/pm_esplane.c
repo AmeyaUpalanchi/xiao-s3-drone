@@ -109,6 +109,36 @@ const static float bat671723HS25C[10] =
   4.10  // 90%
 };
 
+/* 1S LiPo open-circuit voltage at 0,5,10..100 % (21 points). */
+static const float lipo1sCurve[21] = {
+  3.27f, 3.61f, 3.69f, 3.71f, 3.73f, 3.75f, 3.77f, 3.79f, 3.80f, 3.82f,
+  3.84f, 3.85f, 3.87f, 3.91f, 3.95f, 3.98f, 4.02f, 4.08f, 4.11f, 4.15f, 4.20f
+};
+static float filteredVoltage = 0.0f;
+static uint8_t batteryPercent = 0;
+
+static uint8_t pmBatteryPercentFromVoltage(float v)
+{
+  if (v <= lipo1sCurve[0]) {
+    return 0;
+  }
+  if (v >= lipo1sCurve[20]) {
+    return 100;
+  }
+  for (int i = 1; i < 21; i++) {
+    if (v < lipo1sCurve[i]) {
+      float frac = (v - lipo1sCurve[i - 1]) / (lipo1sCurve[i] - lipo1sCurve[i - 1]);
+      return (uint8_t)((i - 1) * 5 + frac * 5.0f + 0.5f);
+    }
+  }
+  return 100;
+}
+
+uint8_t pmGetBatteryPercent(void)
+{
+  return batteryPercent;
+}
+
 STATIC_MEM_TASK_ALLOC(pmTask, PM_TASK_STACKSIZE);
 
 void pmInit(void)
@@ -334,7 +364,14 @@ void pmTask(void *param)
   extBatteryVoltageMV = (uint16_t)(extBatteryVoltage * 1000);
   extBatteryCurrent = pmMeasureExtBatteryCurrent();
   pmSetBatteryVoltage(extBatteryVoltage);
-  batteryLevel = pmBatteryChargeFromVoltage(pmGetBatteryVoltage()) * 10;
+  // Low-pass the voltage (motor load makes it jump) before mapping to %.
+  if (filteredVoltage < 1.0f) {
+    filteredVoltage = extBatteryVoltage;
+  } else {
+    filteredVoltage += 0.05f * (extBatteryVoltage - filteredVoltage);
+  }
+  batteryPercent = pmBatteryPercentFromVoltage(filteredVoltage);
+  batteryLevel = batteryPercent;   // pm.batteryLevel is now 0..100 %
 #ifdef DEBUG_EP2
   DEBUG_PRINTD("batteryLevel=%u extBatteryVoltageMV=%u \n", batteryLevel, extBatteryVoltageMV);
 #endif

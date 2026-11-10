@@ -34,11 +34,34 @@
 static bool isInit;
 
 static esp_adc_cal_characteristics_t *adc_chars;
+/* ADC1 channel derived from CONFIG_ADC1_PIN.
+ * ESP32:       GPIO36..39 -> CH0..3, GPIO32..35 -> CH4..7
+ * ESP32-S2/S3: GPIO1..10  -> CH0..9  (XIAO ESP32-S3: D1 = GPIO2 = ADC1_CH1)
+ * The old code hard-coded ADC_CHANNEL_6, which is GPIO7 on S2/S3, so the
+ * battery voltage was never read from the VBAT_SENSE pin. */
+static adc_channel_t channel = ADC_CHANNEL_0;
+
+static adc_channel_t adcChannelFromGpio(int gpio)
+{
 #ifdef CONFIG_IDF_TARGET_ESP32
-static const adc_channel_t channel = ADC_CHANNEL_6; //GPIO35 if ADC1
-#elif defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3)
-static const adc_channel_t channel = ADC_CHANNEL_6;     // GPIO2 if ADC1
+    switch (gpio) {
+    case 36: return ADC_CHANNEL_0;
+    case 37: return ADC_CHANNEL_1;
+    case 38: return ADC_CHANNEL_2;
+    case 39: return ADC_CHANNEL_3;
+    case 32: return ADC_CHANNEL_4;
+    case 33: return ADC_CHANNEL_5;
+    case 34: return ADC_CHANNEL_6;
+    default: return ADC_CHANNEL_7; // GPIO35
+    }
+#else
+    if (gpio < 1 || gpio > 10) {
+        DEBUG_PRINTE("GPIO%d is not an ADC1 pin, falling back to GPIO2", gpio);
+        gpio = 2;
+    }
+    return (adc_channel_t)(gpio - 1);
 #endif
+}
 
 static const adc_bits_width_t width = ADC_WIDTH_MAX-1;
 static const adc_atten_t atten = ADC_ATTEN_DB_11;   //11dB attenuation (ADC_ATTEN_DB_11) gives full-scale voltage 3.9V
@@ -80,6 +103,9 @@ void adcInit(void)
     if (isInit) {
         return;
     }
+
+    channel = adcChannelFromGpio(CONFIG_ADC1_PIN);
+    DEBUG_PRINTI("battery ADC on GPIO%d (ADC1_CH%d)", CONFIG_ADC1_PIN, (int)channel);
 
     if (unit == ADC_UNIT_1) {
         adc1_config_width(width);

@@ -1,6 +1,5 @@
 firmware/build/
 firmware/managed_components/
-firmware/dependencies.lock
 firmware/sdkconfig.old
 android-app/.gradle/
 android-app/build/

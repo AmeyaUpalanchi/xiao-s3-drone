@@ -60,6 +60,9 @@
 //#include "watchdog.h"
 #include "queuemonitor.h"
 #include "buzzer.h"
+#ifdef CONFIG_DRONE_CAMERA
+#include "camera_stream.h"
+#endif
 #include "sound.h"
 #include "sysload.h"
 #include "estimator_kalman.h"
@@ -201,6 +204,11 @@ void systemTask(void *arg)
   //}
   soundInit();
   memInit();
+
+#ifdef CONFIG_DRONE_CAMERA
+  // XIAO ESP32-S3 Sense: live video + photo over Wi-Fi (no-op if no camera)
+  cameraStreamInit();
+#endif
 
 #ifdef PROXIMITY_ENABLED
   proximityInit();

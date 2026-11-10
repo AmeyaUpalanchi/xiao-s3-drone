@@ -633,7 +633,7 @@ static void sensorsTaskInit(void)
   DEBUG_PRINTD("xTaskCreate sensorsTask \n");
 }
 
-static void IRAM_ATTR sensors_inta_isr_handler(void *arg)
+static void IRAM_ATTR __attribute__((unused)) sensors_inta_isr_handler(void *arg)
 {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     imuIntTimestamp = usecTimestamp(); //This function returns the number of microseconds since esp_timer was initialized
@@ -644,6 +644,32 @@ static void IRAM_ATTR sensors_inta_isr_handler(void *arg)
     }
 }
 
+#if CONFIG_MPU_PIN_INT < 0
+#include "esp_timer.h"
+/* MPU6050 INT pin is not wired (XIAO PCB1, U1 pin 8 open).
+ * The MPU runs at 1 kHz output rate, so poll it from a 1 kHz esp_timer
+ * that releases the sensors task exactly like the data-ready interrupt did. */
+static esp_timer_handle_t imuPollTimer;
+
+static void sensorsPollTimerCb(void *arg)
+{
+    imuIntTimestamp = usecTimestamp();
+    xSemaphoreGive(sensorsDataReady);
+}
+
+static void sensorsInterruptInit(void)
+{
+    sensorsDataReady = xSemaphoreCreateBinary();
+    dataReady = xSemaphoreCreateBinary();
+    const esp_timer_create_args_t args = {
+        .callback = sensorsPollTimerCb,
+        .name = "imu_poll",
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&args, &imuPollTimer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(imuPollTimer, 1000)); // 1 kHz
+    DEBUG_PRINTI("MPU6050 INT not connected: polling at 1 kHz\n");
+}
+#else
 static void sensorsInterruptInit(void)
 {
 
@@ -679,6 +705,7 @@ static void sensorsInterruptInit(void)
     //   FSYNC "shall not be floating, must be set high or low by the MCU"
 
 }
+#endif /* CONFIG_MPU_PIN_INT < 0 */
 
 void sensorsMpu6050Hmc5883lMs5611Init(void)
 {
