@@ -53,6 +53,19 @@ public class MainPresenter {
     private Thread mSendJoystickDataThread;
     private ConsoleListener mConsoleListener;
 
+    // ---- Flight safety (arm / land / kill) ----
+    public static final int STATE_DISARMED = 0;
+    public static final int STATE_ARMED = 1;
+    public static final int STATE_LANDING = 2;
+    public static final int STATE_FAILSAFE = 3;
+    private static final long LAND_DESCENT_MS = 3000;
+    private static final long LAND_RAMP_MS = 1500;
+    private volatile boolean mFirmwareSafety = false;   // firmware has the "safety" param group
+    private volatile int mFlightState = STATE_DISARMED;
+    private volatile float mLastSentThrust = 0f;
+    private volatile float mLandStartThrust = 0f;
+    private volatile long mLandStartMs = 0;
+
     public MainPresenter(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
     }
@@ -99,6 +112,8 @@ public class MainPresenter {
                     checkForBuzzerDeck();
                     checkForNoOfRingEffects();
                     checkForZRanger();
+                    mFirmwareSafety = paramToc.getElementByCompleteName("safety.armed") != null;
+                    Log.d(LOG_TAG, "firmware safety module: " + mFirmwareSafety);
                 }
             }
             mLogg = mCrazyflie.getLogg();
@@ -213,7 +228,12 @@ public class MainPresenter {
                     float roll = controller.getRoll();
                     float pitch = controller.getPitch();
                     float yaw = controller.getYaw();
-                    float thrustAbsolute = controller.getThrustAbsolute();
+                    float thrustAbsolute = gateThrust(controller.getThrustAbsolute());
+                    if (mFlightState == STATE_LANDING || mFlightState == STATE_FAILSAFE) {
+                        roll = 0;
+                        pitch = 0;
+                        yaw = 0;
+                    }
                     boolean xmode = mainActivity.getControls().isXmode();
                     if (heightHold) {
                         float targetHeight = controller.getTargetHeight();
@@ -308,6 +328,7 @@ public class MainPresenter {
             mDriver.removeConnectionListener(crazyflieConnectionAdapter);
         }
 
+        setFlightState(STATE_DISARMED);
         // link quality is not available when there is no active connection
         if (mainActivity != null) {
             mainActivity.setLinkQualityText("N/A");
@@ -361,6 +382,112 @@ public class MainPresenter {
         return mCrazyflie;
     }
 
+    // =====================================================================
+    //  Arm / disarm, auto-land, kill
+    // =====================================================================
+
+    public boolean isConnected() {
+        return mCrazyflie != null && mCrazyflie.isConnected();
+    }
+
+    public int getFlightState() {
+        return mFlightState;
+    }
+
+    /** Thrust actually sent last (0 when disarmed). */
+    public float getLastSentThrust() {
+        return mLastSentThrust;
+    }
+
+    private void setFlightState(int state) {
+        if (mFlightState != state) {
+            mFlightState = state;
+            if (mainActivity != null) {
+                mainActivity.onFlightStateChanged(state);
+            }
+        }
+    }
+
+    public void arm() {
+        if (!isConnected()) {
+            return;
+        }
+        if (mFirmwareSafety) {
+            mCrazyflie.setParamValue("safety.kill", 0);
+            mCrazyflie.setParamValue("safety.land", 0);
+            mCrazyflie.setParamValue("safety.armed", 1);
+        }
+        setFlightState(STATE_ARMED);
+    }
+
+    public void disarm() {
+        if (mFirmwareSafety && isConnected()) {
+            mCrazyflie.setParamValue("safety.armed", 0);
+        }
+        setFlightState(STATE_DISARMED);
+    }
+
+    public void autoLand() {
+        if (mFlightState != STATE_ARMED) {
+            return;
+        }
+        if (mFirmwareSafety && isConnected()) {
+            mCrazyflie.setParamValue("safety.land", 1);
+        }
+        mLandStartThrust = mLastSentThrust;
+        mLandStartMs = System.currentTimeMillis();
+        setFlightState(STATE_LANDING);
+    }
+
+    public void cancelLanding() {
+        if (mFlightState != STATE_LANDING) {
+            return;
+        }
+        if (mFirmwareSafety && isConnected()) {
+            mCrazyflie.setParamValue("safety.land", 0);
+        }
+        setFlightState(STATE_ARMED);
+    }
+
+    /** Emergency: cut the motors now. */
+    public void kill() {
+        if (mFirmwareSafety && isConnected()) {
+            mCrazyflie.setParamValue("safety.kill", 1);
+        }
+        setFlightState(STATE_DISARMED);
+    }
+
+    /** Applies the arm state to the pilot's thrust before it is sent. */
+    private float gateThrust(float pilotThrust) {
+        float out;
+        switch (mFlightState) {
+            case STATE_ARMED:
+                out = pilotThrust;
+                break;
+            case STATE_LANDING:
+            case STATE_FAILSAFE:
+                if (mFirmwareSafety) {
+                    out = 0;   // the drone flies the landing itself and ignores this
+                } else {
+                    // Old firmware: run the same timed descent from the app
+                    long t = System.currentTimeMillis() - mLandStartMs;
+                    if (t < LAND_DESCENT_MS) {
+                        out = mLandStartThrust * 0.85f;
+                    } else if (t < LAND_DESCENT_MS + LAND_RAMP_MS) {
+                        out = mLandStartThrust * 0.85f * (1f - (t - LAND_DESCENT_MS) / (float) LAND_RAMP_MS);
+                    } else {
+                        out = 0;
+                        setFlightState(STATE_DISARMED);
+                    }
+                }
+                break;
+            default:
+                out = 0;
+        }
+        mLastSentThrust = out;
+        return out;
+    }
+
     private LogAdapter standardLogAdapter = new LogAdapter() {
 
         public void logDataReceived(LogConfig logConfig, Map<String, Number> data, int timestamp) {
@@ -373,6 +500,10 @@ public class MainPresenter {
                 // Firmware >= xiao port reports a real 0..100 % in pm.batteryLevel
                 int percent = level != null ? level.intValue() : MainActivity.percentFromVoltage(voltage);
                 mainActivity.setBattery(percent, voltage);
+                Number safety = data.get("safety.state");
+                if (safety != null && mFirmwareSafety) {
+                    setFlightState(safety.intValue());
+                }
             }
             for (Map.Entry<String, Number> entry : data.entrySet()) {
                 Log.d(LOG_TAG, "\t Name: " + entry.getKey() + ", data: " + entry.getValue());
@@ -386,6 +517,9 @@ public class MainPresenter {
         logConfigStandard.addVariable("pm.vbat", VariableType.FLOAT);
         if (mLogToc != null && mLogToc.getElementByCompleteName("pm.batteryLevel") != null) {
             logConfigStandard.addVariable("pm.batteryLevel", VariableType.UINT8_T);
+        }
+        if (mLogToc != null && mLogToc.getElementByCompleteName("safety.state") != null) {
+            logConfigStandard.addVariable("safety.state", VariableType.UINT8_T);
         }
         return logConfigStandard;
     }

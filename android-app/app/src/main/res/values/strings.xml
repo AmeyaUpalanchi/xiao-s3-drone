@@ -5,6 +5,51 @@
     <string name="title_activity_main">The Drone Community</string>
     <string name="brand_name">The Drone Community</string>
 
+    <!-- Stick labels on the flight screen -->
+    <string name="stick_left_label">Throttle · Turn</string>
+    <string name="stick_right_label">Move</string>
+
+    <!-- How to fly -->
+    <string name="help_title">How to fly</string>
+    <string name="help_subtitle">Both sticks spring back to the middle when you let go.</string>
+    <string name="help_left_title">Left stick</string>
+    <string name="help_left_up">Up: climb</string>
+    <string name="help_left_down">Middle or below: motors off</string>
+    <string name="help_left_left">Turn left</string>
+    <string name="help_left_right">Turn right</string>
+    <string name="help_left_note">Push up slowly until the drone lifts. Let go and the motors stop, so keep your thumb on it.</string>
+    <string name="help_right_title">Right stick</string>
+    <string name="help_right_up">Up: fly forward</string>
+    <string name="help_right_down">Down: fly back</string>
+    <string name="help_right_left">Slide left</string>
+    <string name="help_right_right">Slide right</string>
+    <string name="help_right_note">Small movements go a long way. Let go and the drone levels out.</string>
+    <string name="help_steps_title">Before you take off</string>
+    <string name="help_steps">1.  Put the drone on flat ground and switch it on. Don\'t touch it for 3 seconds while the sensors settle.\n2.  Tap Connect. The phone joins the drone\'s Wi-Fi on its own (allow it the first time). Battery and signal show up at the top.\n3.  Let go of the left stick and tap Arm. The button turns amber: the drone is live.\n4.  Ease the left stick up until it lifts off, then steer with the right stick.\n5.  To land, lower the left stick slowly or tap Land. Land at 20% battery or when the timer shows under a minute.\n6.  Tap Disarm once it\'s on the ground.</string>
+    <string name="help_buttons_title">Buttons</string>
+    <string name="help_buttons">Arm / Disarm (top): the motors can only spin while armed. Let go of the left stick before arming.\nLand: the drone levels itself, sinks to the ground and disarms. Tap Cancel to take back control.\nHold to stop: press and hold for half a second to cut the motors at once. Emergencies only, the drone will drop.\nTimer (next to battery): roughly how many minutes of flying are left.\nLock (on the left stick): stops the left stick moving sideways, so you can\'t turn by accident.\nLive, Photo, Record: camera feed, photos and video. These need a XIAO ESP32-S3 Sense running this firmware.\nIf the Wi-Fi signal drops for half a second, the drone lands by itself.</string>
+    <string name="help_mode_note">These are Mode 2 controls (the default). You can swap sticks in Settings, Flight control, Mode.</string>
+    <string name="help_done">Got it</string>
+
+    <!-- Flight -->
+    <string name="button_arm">Arm</string>
+    <string name="button_disarm">Disarm</string>
+    <string name="button_land">Land</string>
+    <string name="button_cancel_land">Cancel</string>
+    <string name="button_stop_motors">Hold to stop</string>
+    <string name="status_landing">Landing…</string>
+    <string name="status_failsafe">Signal lost, landing</string>
+    <string name="toast_lower_throttle">Let go of the left stick before arming</string>
+    <string name="toast_land_first">Land first, or hold Stop to cut the motors</string>
+    <string name="toast_hold_stop">Hold the button to stop the motors</string>
+    <string name="toast_motors_stopped">Motors stopped</string>
+    <string name="toast_armed">Armed. Push the left stick up slowly to take off.</string>
+    <string name="toast_finding_wifi">Looking for the drone\'s Wi-Fi…</string>
+    <string name="toast_wifi_failed">Couldn\'t find the drone\'s Wi-Fi. Is it switched on and nearby?</string>
+    <string name="button_connecting">Connecting…</string>
+    <string name="flight_time_fmt">~%1$d min</string>
+    <string name="flight_time_short">&lt;1 min</string>
+
     <!-- Camera -->
     <string name="chip_live">Live</string>
     <string name="chip_rec">REC 00:00</string>
@@ -17,16 +62,16 @@
     <string name="hlock_contentDescription">Lock horizontal axis of left stick</string>
     <string name="battery_voltage_fmt">%1$.2f V</string>
     <string name="video_no_drone">Drone not connected</string>
-    <string name="video_no_drone_hint">Join the drone\'s Wi-Fi (ESP-DRONE_…, password 12345678), then tap Connect.</string>
-    <string name="video_no_camera">No camera found</string>
-    <string name="video_no_camera_hint">Attach a XIAO ESP32-S3 Sense camera to see video here.</string>
+    <string name="video_no_drone_hint">Switch the drone on and tap Connect. The first time, Android asks you to allow the drone\'s Wi-Fi.</string>
+    <string name="video_no_camera">No camera on this drone</string>
+    <string name="video_no_camera_hint">Live video, photos and recording work when the drone uses a XIAO ESP32-S3 Sense running The Drone Community firmware.</string>
     <string name="video_ready">Camera ready</string>
     <string name="video_ready_hint">Tap Live to start the feed.</string>
     <string name="video_connecting">Starting video…</string>
     <string name="toast_photo_saved">Photo saved to %1$s</string>
     <string name="toast_video_saved">Video saved to %1$s</string>
     <string name="toast_need_live">Start the live feed first</string>
-    <string name="toast_no_camera">No camera on the drone</string>
+    <string name="toast_no_camera">No camera: needs a XIAO ESP32-S3 Sense with this firmware</string>
     <string name="toast_record_failed">Couldn\'t start recording: %1$s</string>
     <string name="toast_photo_failed">Couldn\'t save photo: %1$s</string>
 

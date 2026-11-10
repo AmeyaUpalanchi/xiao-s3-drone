@@ -38,6 +38,7 @@
 #include "pm_esplane.h"
 #include "esp_timer.h"
 #include "stabilizer.h"
+#include "flight_safety.h"
 #include "sensors.h"
 #include "commander.h"
 #include "crtp_localization_service.h"
@@ -300,6 +301,7 @@ static void stabilizerTask(void* param)
       compressState();
 
       commanderGetSetpoint(&setpoint, &state);
+      flightSafetyUpdate(&setpoint);   // arm/disarm, auto-land, kill, failsafe
       if (RATE_DO_EXECUTE(10, tick)) {
         printf("cmd thr=%.0f roll=%.1f pitch=%.1f yawRate=%.1f\n",
                (double)setpoint.thrust,
@@ -317,7 +319,7 @@ static void stabilizerTask(void* param)
       checkEmergencyStopTimeout();
 
       checkStops = systemIsArmed();
-      if (emergencyStop || (systemIsArmed() == false)) {
+      if (emergencyStop || (systemIsArmed() == false) || !flightSafetyMotorsAllowed()) {
         powerStop();
       } else {
         powerDistribution(&control);

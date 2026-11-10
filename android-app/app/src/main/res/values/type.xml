@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Type scale (Sora)
+        Title    16sp SemiBold   app name in the top bar
+        Heading  15sp SemiBold   video panel message
+        Label    14sp SemiBold   buttons, telemetry values
+        Body     13sp Regular    status text
+        Caption  12sp Regular    secondary text
+        Micro    11sp Regular    telemetry labels, overlays
+    -->
+    <style name="TextAppearance.Drone.Title" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">@font/sora_semibold</item>
+        <item name="fontFamily">@font/sora_semibold</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:textColor">@color/brand_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.Drone.Heading" parent="TextAppearance.Drone.Title">
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="TextAppearance.Drone.Label" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">@font/sora_semibold</item>
+        <item name="fontFamily">@font/sora_semibold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="TextAppearance.Drone.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">@font/sora_regular</item>
+        <item name="fontFamily">@font/sora_regular</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textColor">@color/brand_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.Drone.Caption" parent="TextAppearance.Drone.Body">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/brand_muted</item>
+        <item name="android:lineSpacingExtra">3sp</item>
+    </style>
+
+    <style name="TextAppearance.Drone.Micro" parent="TextAppearance.Drone.Body">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/brand_muted</item>
+    </style>
+
+    <style name="TextAppearance.Drone.Value" parent="TextAppearance.Drone.Label">
+        <item name="android:textColor">@color/brand_on_surface</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+</resources>

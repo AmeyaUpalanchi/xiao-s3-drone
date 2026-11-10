@@ -26,6 +26,17 @@ public final class DroneNetwork {
     public static final String CAPTURE_URL = "http://" + DRONE_IP + "/capture";
     public static final String STREAM_URL = "http://" + DRONE_IP + ":81/stream";
 
+    /** Soft-AP name prefix and password set in the firmware (wifi_esp32.c). */
+    public static final String DRONE_SSID_PREFIX = "ESP-DRONE_";
+    public static final String DRONE_PASSWORD = "12345678";
+
+    public interface JoinListener {
+        void onJoined();
+        void onFailed();
+    }
+
+    private static ConnectivityManager.NetworkCallback sJoinCallback;
+
     private static volatile Network sWifiNetwork;
     private static ConnectivityManager.NetworkCallback sCallback;
     private static ConnectivityManager sCm;
@@ -69,7 +80,95 @@ public final class DroneNetwork {
         }
     }
 
+    /** Quick check whether the drone answers on the current network. */
+    public static boolean isDroneReachable() {
+        HttpURLConnection c = null;
+        try {
+            c = open(STATUS_URL, 1200, 1200);
+            return c.getResponseCode() == 200;
+        } catch (IOException e) {
+            return false;
+        } finally {
+            if (c != null) {
+                c.disconnect();
+            }
+        }
+    }
+
+    /**
+     * Asks Android to join the drone's Wi-Fi (any SSID starting with ESP-DRONE_).
+     * Android 10+ shows its own "connect to device" sheet; the user taps the drone once.
+     */
+    public static synchronized void joinDroneWifi(Context context, JoinListener listener) {
+        ConnectivityManager cm = context.getApplicationContext().getSystemService(ConnectivityManager.class);
+        if (cm == null || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+            listener.onFailed();
+            return;
+        }
+        releaseJoin(cm);
+        android.net.wifi.WifiNetworkSpecifier spec = new android.net.wifi.WifiNetworkSpecifier.Builder()
+                .setSsidPattern(new android.os.PatternMatcher(DRONE_SSID_PREFIX, android.os.PatternMatcher.PATTERN_PREFIX))
+                .setWpa2Passphrase(DRONE_PASSWORD)
+                .build();
+        NetworkRequest request = new NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .setNetworkSpecifier(spec)
+                .build();
+        final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        sJoinCallback = new ConnectivityManager.NetworkCallback() {
+            private boolean done;
+
+            @Override
+            public void onAvailable(Network network) {
+                sWifiNetwork = network;
+                cm.bindProcessToNetwork(network);
+                Log.i(TAG, "joined drone Wi-Fi");
+                if (!done) {
+                    done = true;
+                    main.post(listener::onJoined);
+                }
+            }
+
+            @Override
+            public void onUnavailable() {
+                if (!done) {
+                    done = true;
+                    main.post(listener::onFailed);
+                }
+            }
+
+            @Override
+            public void onLost(Network network) {
+                if (network.equals(sWifiNetwork)) {
+                    sWifiNetwork = null;
+                    cm.bindProcessToNetwork(null);
+                }
+            }
+        };
+        try {
+            cm.requestNetwork(request, sJoinCallback, 45_000);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "requestNetwork failed", e);
+            sJoinCallback = null;
+            listener.onFailed();
+        }
+    }
+
+    private static void releaseJoin(ConnectivityManager cm) {
+        if (sJoinCallback != null) {
+            try {
+                cm.unregisterNetworkCallback(sJoinCallback);
+            } catch (RuntimeException ignored) {
+            }
+            sJoinCallback = null;
+        }
+    }
+
     public static synchronized void stop() {
+        if (sCm != null) {
+            releaseJoin(sCm);
+        }
         if (sCm != null && sCallback != null) {
             try {
                 sCm.unregisterNetworkCallback(sCallback);

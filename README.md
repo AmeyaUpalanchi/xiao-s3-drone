@@ -43,6 +43,22 @@ Without a camera the drone flies normally and `/status` reports `"camera": false
 Resolution, JPEG quality and frame-rate cap are in `menuconfig` under
 *ESPDrone Config -> camera*.
 
+### Flight safety (new)
+
+The drone starts **disarmed**. The app arms it with the Arm button, and the motors
+can only spin while armed. All of this runs on the drone itself (`flight_safety.c`),
+so it still works if the phone app freezes.
+
+| App control | Firmware parameter | What happens |
+|---|---|---|
+| Arm / Disarm | `safety.armed` | Arming is only accepted while the throttle is at zero |
+| Land | `safety.land` | Levels out, sinks for 3 s at 85 % of hover thrust, ramps to zero, disarms |
+| Hold to stop | `safety.kill` | Cuts the motors immediately and disarms |
+
+The drone also lands by itself if the Wi-Fi link is silent for 0.5 s or the battery
+stays below 3.2 V for 5 s. There is no altitude sensor on PCB1, so landing is a
+timed descent: start it from low height for the softest touchdown.
+
 ### Build and flash
 
 ```bash
@@ -64,5 +80,5 @@ cd android-app
 ./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Brand colours are all in `android-app/app/src/main/res/values/colors.xml`.
+Font: Sora (SIL OFL, bundled in `res/font`). Brand colours are all in `android-app/app/src/main/res/values/colors.xml`.
 Photos go to `Pictures/DroneCommunity`, videos to `Movies/DroneCommunity`.

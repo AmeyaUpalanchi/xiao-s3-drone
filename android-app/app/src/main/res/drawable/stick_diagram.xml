@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp" android:height="96dp" android:viewportWidth="96" android:viewportHeight="96">
+    <!-- ring -->
+    <path android:strokeColor="@color/stick_ring" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M48,48m-38,0a38,38 0,1 1,76 0a38,38 0,1 1,-76 0" />
+    <!-- knob -->
+    <path android:fillColor="@color/stick_handle" android:pathData="M48,48m-13,0a13,13 0,1 1,26 0a13,13 0,1 1,-26 0" />
+    <!-- arrows -->
+    <path android:fillColor="@color/brand_primary" android:pathData="M48,14l-6,8h12z" />
+    <path android:fillColor="@color/brand_primary" android:pathData="M48,82l-6,-8h12z" />
+    <path android:fillColor="@color/brand_primary" android:pathData="M14,48l8,-6v12z" />
+    <path android:fillColor="@color/brand_primary" android:pathData="M82,48l-8,-6v12z" />
+</vector>

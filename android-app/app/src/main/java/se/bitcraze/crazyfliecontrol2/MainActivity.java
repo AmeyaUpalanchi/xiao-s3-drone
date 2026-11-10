@@ -154,6 +154,19 @@ public class MainActivity extends EspActivity {
     private View mVideoPlaceholder;
     private TextView mVideoPlaceholderTitle;
     private TextView mVideoPlaceholderSubtitle;
+    // ---- Flight controls ----
+    /** Rough hover time on a full 1S pack with 720 brushed motors; refined in flight. */
+    private static final float NOMINAL_FLIGHT_MIN = 6f;
+    private static final int BATTERY_RESERVE_PCT = 10;
+    private MaterialButton mArmButton;
+    private MaterialButton mLandButton;
+    private MaterialButton mStopButton;
+    private TextView mFlightTime;
+    private TextView mFlightStatus;
+    private long mFlightSampleStartMs;
+    private int mFlightSampleStartPct = -1;
+    private boolean mConnecting = false;
+
     private MaterialButton mPhotoButton;
     private MaterialButton mRecordButton;
     private MaterialButton mLiveButton;
@@ -207,8 +220,8 @@ public class MainActivity extends EspActivity {
             public void onClick(View v) {
                 boolean targetState = !mJoystickViewLeft.isHorizontalLocked();
                 mJoystickViewLeft.setHorizontalLocked(targetState);
-                mJoystickLeftHLock.setBackgroundResource(targetState ? R.drawable.custom_button :
-                        R.drawable.custom_button_seledted);
+                mJoystickLeftHLock.setBackgroundResource(targetState ? R.drawable.bg_lock_on :
+                        R.drawable.bg_lock_off);
             }
         });
 
@@ -243,7 +256,195 @@ public class MainActivity extends EspActivity {
 
         initializeCameraUi();
         DroneNetwork.start(this);
+
+        findViewById(R.id.button_help).setOnClickListener(v -> showHowToFly());
+        initializeFlightControls();
+        if (!mPreferences.getBoolean(PREF_HELP_SEEN, false)) {
+            mUiHandler.postDelayed(this::showHowToFly, 600);
+        }
         getOnBackPressedDispatcher().addCallback(this, mBackCallback);
+    }
+
+    // =====================================================================
+    //  Arm / Land / Stop, flight time, one-tap connect
+    // =====================================================================
+
+    private void initializeFlightControls() {
+        mArmButton = findViewById(R.id.button_arm);
+        mLandButton = findViewById(R.id.button_land);
+        mStopButton = findViewById(R.id.button_stop);
+        mFlightTime = findViewById(R.id.flight_time);
+        mFlightStatus = findViewById(R.id.flight_status);
+
+        mArmButton.setOnClickListener(v -> {
+            if (!mPresenter.isConnected()) {
+                return;
+            }
+            if (mPresenter.getFlightState() == MainPresenter.STATE_DISARMED) {
+                if (mController != null && mController.getThrust() > 0) {
+                    showToastie(getString(R.string.toast_lower_throttle));
+                    return;
+                }
+                mPresenter.arm();
+                showToastie(getString(R.string.toast_armed));
+            } else {
+                if (mPresenter.getLastSentThrust() > 0) {
+                    showToastie(getString(R.string.toast_land_first));
+                    return;
+                }
+                mPresenter.disarm();
+            }
+        });
+
+        mLandButton.setOnClickListener(v -> {
+            if (mPresenter.getFlightState() == MainPresenter.STATE_LANDING) {
+                mPresenter.cancelLanding();
+            } else {
+                mPresenter.autoLand();
+            }
+        });
+
+        // Stop must be held (~0.5 s) so a stray tap cannot drop the drone.
+        mStopButton.setOnClickListener(v -> showToastie(getString(R.string.toast_hold_stop)));
+        mStopButton.setOnLongClickListener(v -> {
+            mPresenter.kill();
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            showToastie(getString(R.string.toast_motors_stopped));
+            return true;
+        });
+        updateFlightUi();
+    }
+
+    /** Called by the presenter (any thread) when arm/landing state changes. */
+    public void onFlightStateChanged(int state) {
+        runOnUiThread(this::updateFlightUi);
+    }
+
+    private void updateFlightUi() {
+        if (mArmButton == null) {
+            return;
+        }
+        boolean connected = mPresenter != null && mPresenter.isConnected();
+        int state = mPresenter != null ? mPresenter.getFlightState() : MainPresenter.STATE_DISARMED;
+        boolean armed = state != MainPresenter.STATE_DISARMED;
+        boolean landing = state == MainPresenter.STATE_LANDING || state == MainPresenter.STATE_FAILSAFE;
+
+        mArmButton.setEnabled(connected);
+        mArmButton.setAlpha(connected ? 1f : 0.4f);
+        mArmButton.setText(armed ? R.string.button_disarm : R.string.button_arm);
+        int warn = ContextCompat.getColor(this, R.color.status_warn);
+        mArmButton.setBackgroundTintList(ColorStateList.valueOf(armed ? warn : ContextCompat.getColor(this, R.color.transparent)));
+        mArmButton.setTextColor(armed ? Color.BLACK : ContextCompat.getColor(this, R.color.brand_on_surface));
+
+        mLandButton.setEnabled(armed && state != MainPresenter.STATE_FAILSAFE);
+        mLandButton.setAlpha(mLandButton.isEnabled() ? 1f : 0.4f);
+        mLandButton.setText(state == MainPresenter.STATE_LANDING ? R.string.button_cancel_land : R.string.button_land);
+
+        mStopButton.setEnabled(armed);
+        mStopButton.setAlpha(armed ? 1f : 0.4f);
+
+        if (landing) {
+            mFlightStatus.setText(state == MainPresenter.STATE_FAILSAFE ? R.string.status_failsafe : R.string.status_landing);
+            mFlightStatus.setVisibility(View.VISIBLE);
+        } else {
+            mFlightStatus.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateFlightTime(int percent) {
+        if (mFlightTime == null) {
+            return;
+        }
+        if (percent < 0) {
+            mFlightTime.setVisibility(View.GONE);
+            mFlightSampleStartPct = -1;
+            return;
+        }
+        float usable = Math.max(0, percent - BATTERY_RESERVE_PCT);
+        float minutes = usable / (100f - BATTERY_RESERVE_PCT) * NOMINAL_FLIGHT_MIN;
+        boolean flying = mPresenter != null && mPresenter.getFlightState() != MainPresenter.STATE_DISARMED
+                && mPresenter.getLastSentThrust() > 0;
+        long now = System.currentTimeMillis();
+        if (flying) {
+            if (mFlightSampleStartPct < 0) {
+                mFlightSampleStartPct = percent;
+                mFlightSampleStartMs = now;
+            }
+            float elapsedMin = (now - mFlightSampleStartMs) / 60000f;
+            int drop = mFlightSampleStartPct - percent;
+            if (elapsedMin > 0.75f && drop >= 2) {
+                minutes = usable / (drop / elapsedMin);   // measured drain rate
+            }
+        } else {
+            mFlightSampleStartPct = -1;
+        }
+        mFlightTime.setText(minutes < 1f ? getString(R.string.flight_time_short)
+                : getString(R.string.flight_time_fmt, Math.round(minutes)));
+        mFlightTime.setVisibility(View.VISIBLE);
+    }
+
+    /** Connect button: join the drone Wi-Fi if needed, then open the CRTP link. */
+    private void connectToDrone() {
+        if (mConnecting) {
+            return;
+        }
+        mConnecting = true;
+        mToggleConnectButton.setText(R.string.button_connecting);
+        mMediaExecutor.execute(() -> {
+            boolean reachable = DroneNetwork.isDroneReachable();
+            mUiHandler.post(() -> {
+                if (reachable) {
+                    finishConnect();
+                    return;
+                }
+                showToastie(getString(R.string.toast_finding_wifi));
+                DroneNetwork.joinDroneWifi(this, new DroneNetwork.JoinListener() {
+                    @Override
+                    public void onJoined() {
+                        finishConnect();
+                    }
+
+                    @Override
+                    public void onFailed() {
+                        mConnecting = false;
+                        setConnectionButtonDisconnected();
+                        showToastie(getString(R.string.toast_wifi_failed));
+                    }
+                });
+            });
+        });
+    }
+
+    private void finishConnect() {
+        mConnecting = false;
+        connect();
+    }
+
+    // =====================================================================
+    //  "How to fly" guide: first launch + the ? button
+    // =====================================================================
+
+    private static final String PREF_HELP_SEEN = "pref_help_seen_v1";
+
+    private void showHowToFly() {
+        if (isFinishing()) {
+            return;
+        }
+        View content = getLayoutInflater().inflate(R.layout.dialog_help, null);
+        androidx.appcompat.app.AlertDialog dialog =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setView(content)
+                        .setPositiveButton(R.string.help_done, (d, w) ->
+                                mPreferences.edit().putBoolean(PREF_HELP_SEEN, true).apply())
+                        .setOnCancelListener(d ->
+                                mPreferences.edit().putBoolean(PREF_HELP_SEEN, true).apply())
+                        .create();
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            int w = Math.min(getResources().getDisplayMetrics().widthPixels * 9 / 10,
+                    (int) (720 * getResources().getDisplayMetrics().density));
+            dialog.getWindow().setLayout(w, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     // =====================================================================
@@ -598,7 +799,7 @@ public class MainActivity extends EspActivity {
                             connectCrazyradio();
                         } else {
                             // ESP-Drone talks CRTP over the drone's Wi-Fi access point
-                            connect();
+                            connectToDrone();
                         }
                     }
                 } catch (IllegalStateException e) {
@@ -1077,6 +1278,7 @@ public class MainActivity extends EspActivity {
                         ? String.format(Locale.US, getString(R.string.battery_voltage_fmt), voltage) : "");
             }
             mBatteryView.setPercent(percent < 0 ? -1 : Math.min(100, percent));
+            updateFlightTime(percent < 0 ? -1 : Math.min(100, percent));
         });
     }
 
@@ -1116,6 +1318,10 @@ public class MainActivity extends EspActivity {
 
     private void setConnectionButtonState(final boolean connected) {
         runOnUiThread(() -> {
+            updateFlightUi();
+            if (mConnecting && !connected) {
+                return;
+            }
             mToggleConnectButton.setText(connected ? R.string.menu_disconnect : R.string.menu_connect);
             mToggleConnectButton.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this,
                     connected ? R.color.brand_surface_high : R.color.brand_primary)));
