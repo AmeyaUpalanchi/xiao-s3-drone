@@ -1,10 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">#3EC2FC</item>
-        <item name="colorPrimaryDark">#99acc1</item>
-        <item name="colorAccent">#FF4081</item>
+    <style name="AppTheme" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimaryDark">@color/brand_background</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="colorAccent">@color/brand_primary</item>
+        <item name="colorSurface">@color/brand_surface</item>
+        <item name="colorOnSurface">@color/brand_on_surface</item>
+        <item name="android:colorBackground">@color/brand_background</item>
+        <item name="android:windowBackground">@color/brand_background</item>
+        <item name="android:textColorPrimary">@color/brand_on_surface</item>
+        <item name="android:textColorSecondary">@color/brand_muted</item>
+        <item name="android:statusBarColor">@color/transparent</item>
+        <item name="android:navigationBarColor">@color/transparent</item>
+    </style>
+
+    <!-- Flight screen: full-screen video, system bars hidden in code -->
+    <style name="AppTheme.Fullscreen">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+
+    <!-- Framework PreferenceActivity / bootloader screens (need the platform action bar) -->
+    <style name="AppTheme.Settings" parent="android:Theme.Material">
+        <item name="android:colorPrimary">@color/brand_surface</item>
+        <item name="android:colorPrimaryDark">@color/brand_background</item>
+        <item name="android:colorAccent">@color/brand_primary</item>
+        <item name="android:colorBackground">@color/brand_background</item>
+        <item name="android:windowBackground">@color/brand_background</item>
+        <item name="android:textColorPrimary">@color/brand_on_surface</item>
+        <item name="android:textColorSecondary">@color/brand_muted</item>
+    </style>
+
+    <style name="HudLabel">
+        <item name="android:textColor">@color/brand_on_surface</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:shadowColor">#99000000</item>
+        <item name="android:shadowRadius">3</item>
+    </style>
+
+    <style name="HudCaption" parent="HudLabel">
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/brand_muted</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <style name="HudChip" parent="HudLabel">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
+    <style name="HudIconButton">
+        <item name="android:layout_width">44dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:background">@drawable/bg_hud_button</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:tint">@color/brand_on_surface</item>
     </style>
 </resources>

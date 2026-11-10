@@ -84,6 +84,28 @@ import android.widget.Toast;
 import com.MobileAnarchy.Android.Widgets.Joystick.JoystickView;
 import com.espressif.espdrone.android.R;
 
+import android.graphics.Bitmap;
+import android.view.WindowManager;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import se.bitcraze.crazyfliecontrol2.video.DroneNetwork;
+import se.bitcraze.crazyfliecontrol2.video.DroneStatus;
+import se.bitcraze.crazyfliecontrol2.video.DroneStatusPoller;
+import se.bitcraze.crazyfliecontrol2.video.MediaSaver;
+import se.bitcraze.crazyfliecontrol2.video.MjpegStreamReader;
+import se.bitcraze.crazyfliecontrol2.video.MjpegView;
+import se.bitcraze.crazyfliecontrol2.video.Mp4FrameRecorder;
+
 public class MainActivity extends EspActivity {
 
     private static final String LOG_TAG = "CrazyflieControl";
@@ -119,8 +141,37 @@ public class MainActivity extends EspActivity {
     private File mCacheDir;
 
     private TextView mTextView_battery;
+    private TextView mTextView_batteryVoltage;
+    private BatteryView mBatteryView;
     private TextView mTextView_linkQuality;
     private MainPresenter mPresenter;
+
+    // ---- XIAO ESP32-S3 Sense camera ----
+    private static final int RECORD_FPS = 20;
+    private MjpegView mVideoView;
+    private View mVideoPlaceholder;
+    private TextView mVideoPlaceholderTitle;
+    private TextView mVideoPlaceholderSubtitle;
+    private ImageButton mPhotoButton;
+    private ImageButton mRecordButton;
+    private ImageButton mLiveButton;
+    private TextView mRecordLabel;
+    private TextView mLiveLabel;
+    private TextView mChipLive;
+    private TextView mChipRec;
+    private DroneStatusPoller mStatusPoller;
+    private MjpegStreamReader mStreamReader;
+    private final Mp4FrameRecorder mRecorder = new Mp4FrameRecorder();
+    private final ExecutorService mMediaExecutor = Executors.newSingleThreadExecutor();
+    private final Handler mUiHandler = new Handler(android.os.Looper.getMainLooper());
+    private volatile byte[] mLatestJpeg;
+    private volatile int mFrameWidth;
+    private volatile int mFrameHeight;
+    private boolean mDroneReachable = false;
+    private boolean mCameraPresent = false;
+    private boolean mLiveWanted = false;
+    private boolean mAutoLiveDone = false;
+    private volatile boolean mStreamConnected = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -131,7 +182,12 @@ public class MainActivity extends EspActivity {
 
         setDefaultPreferenceValues();
 
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setupEdgeToEdge();
+
         mTextView_battery = (TextView) findViewById(R.id.battery_text);
+        mTextView_batteryVoltage = (TextView) findViewById(R.id.battery_voltage);
+        mBatteryView = (BatteryView) findViewById(R.id.battery_icon);
         mTextView_linkQuality = (TextView) findViewById(R.id.linkQuality_text);
 
         setBatteryLevel(-1.0f);
@@ -179,11 +235,289 @@ public class MainActivity extends EspActivity {
         filter.addAction(this.getPackageName()+".USB_PERMISSION");
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        registerReceiver(mUsbReceiver, filter);
+        ContextCompat.registerReceiver(this, mUsbReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
 
         initializeSounds();
 
         setCacheDir();
+
+        initializeCameraUi();
+        DroneNetwork.start(this);
+        getOnBackPressedDispatcher().addCallback(this, mBackCallback);
+    }
+
+    // =====================================================================
+    //  Full screen / edge-to-edge (targetSdk 36 always draws edge-to-edge)
+    // =====================================================================
+
+    private void setupEdgeToEdge() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        View root = findViewById(R.id.root);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets safe = insets.getInsets(WindowInsetsCompat.Type.displayCutout()
+                    | WindowInsetsCompat.Type.systemBars());
+            v.setPadding(safe.left, safe.top, safe.right, safe.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
+    }
+
+    private void hideSystemBars() {
+        WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        c.hide(WindowInsetsCompat.Type.systemBars());
+    }
+
+    // =====================================================================
+    //  Camera: live view, photo, record
+    // =====================================================================
+
+    private void initializeCameraUi() {
+        mVideoView = findViewById(R.id.video_view);
+        mVideoPlaceholder = findViewById(R.id.video_placeholder);
+        mVideoPlaceholderTitle = findViewById(R.id.video_placeholder_title);
+        mVideoPlaceholderSubtitle = findViewById(R.id.video_placeholder_subtitle);
+        mPhotoButton = findViewById(R.id.button_photo);
+        mRecordButton = findViewById(R.id.button_record);
+        mLiveButton = findViewById(R.id.button_live);
+        mRecordLabel = findViewById(R.id.button_record_label);
+        mLiveLabel = findViewById(R.id.button_live_label);
+        mChipLive = findViewById(R.id.chip_live);
+        mChipRec = findViewById(R.id.chip_rec);
+
+        mLiveButton.setOnClickListener(v -> {
+            if (mLiveWanted) {
+                stopLive();
+            } else {
+                startLive();
+            }
+        });
+        mPhotoButton.setOnClickListener(v -> takePhoto());
+        mRecordButton.setOnClickListener(v -> {
+            if (mRecorder.isRecording()) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        mStatusPoller = new DroneStatusPoller(new DroneStatusPoller.Listener() {
+            @Override
+            public void onDroneStatus(DroneStatus status) {
+                mDroneReachable = true;
+                mCameraPresent = status.cameraPresent;
+                if (status.batteryPercent >= 0) {
+                    setBattery(status.batteryPercent, status.batteryVoltage);
+                }
+                // "if XIAO Sense is connected" -> show the live feed automatically once
+                if (mCameraPresent && !mAutoLiveDone) {
+                    mAutoLiveDone = true;
+                    startLive();
+                }
+                if (!mCameraPresent && mLiveWanted) {
+                    stopLive();
+                }
+                updateVideoUi();
+            }
+
+            @Override
+            public void onDroneUnreachable() {
+                boolean wasReachable = mDroneReachable;
+                mDroneReachable = false;
+                if (wasReachable && (mPresenter == null || mPresenter.getCrazyflie() == null)) {
+                    setBatteryLevel(-1f);
+                }
+                updateVideoUi();
+            }
+        });
+        updateVideoUi();
+    }
+
+    private void startLive() {
+        mLiveWanted = true;
+        if (mStreamReader == null) {
+            mStreamReader = new MjpegStreamReader(DroneNetwork.STREAM_URL, new MjpegStreamReader.Listener() {
+                @Override
+                public void onStreamConnected() {
+                    mUiHandler.post(MainActivity.this::updateVideoUi);
+                }
+
+                @Override
+                public void onFrame(byte[] jpeg, Bitmap bitmap) {
+                    mLatestJpeg = jpeg;
+                    mFrameWidth = bitmap.getWidth();
+                    mFrameHeight = bitmap.getHeight();
+                    mVideoView.setFrame(bitmap);
+                    mRecorder.addFrame(bitmap);
+                    if (!mStreamConnected) {
+                        mStreamConnected = true;
+                        mUiHandler.post(MainActivity.this::updateVideoUi);
+                    }
+                }
+
+                @Override
+                public void onStreamError(String message) {
+                    mStreamConnected = false;
+                    mUiHandler.post(() -> {
+                        if (mRecorder.isRecording()) {
+                            stopRecording();
+                        }
+                        updateVideoUi();
+                    });
+                }
+            });
+        }
+        mStreamReader.start();
+        updateVideoUi();
+    }
+
+    private void stopLive() {
+        mLiveWanted = false;
+        if (mRecorder.isRecording()) {
+            stopRecording();
+        }
+        if (mStreamReader != null) {
+            mStreamReader.stop();
+            mStreamReader = null;
+        }
+        mStreamConnected = false;
+        mLatestJpeg = null;
+        mVideoView.clear();
+        updateVideoUi();
+    }
+
+    private void takePhoto() {
+        if (!mCameraPresent && !mStreamConnected) {
+            showToastie(getString(R.string.toast_no_camera));
+            return;
+        }
+        final byte[] frame = mStreamConnected ? mLatestJpeg : null;
+        mPhotoButton.setEnabled(false);
+        flashVideo();
+        mMediaExecutor.execute(() -> {
+            try {
+                byte[] jpeg = frame != null ? frame : fetchCapture();
+                String where = MediaSaver.savePhoto(getApplicationContext(), jpeg);
+                showToastie(getString(R.string.toast_photo_saved, where));
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "photo failed", e);
+                showToastie(getString(R.string.toast_photo_failed, String.valueOf(e.getMessage())));
+            } finally {
+                mUiHandler.post(this::updateVideoUi);
+            }
+        });
+    }
+
+    /** Full-resolution still from GET /capture (used when the live feed is off). */
+    private static byte[] fetchCapture() throws Exception {
+        HttpURLConnection c = DroneNetwork.open(DroneNetwork.CAPTURE_URL, 3000, 5000);
+        try {
+            if (c.getResponseCode() != 200) {
+                throw new Exception("camera returned HTTP " + c.getResponseCode());
+            }
+            InputStream in = c.getInputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream(128 * 1024);
+            byte[] buf = new byte[16 * 1024];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                out.write(buf, 0, n);
+            }
+            return out.toByteArray();
+        } finally {
+            c.disconnect();
+        }
+    }
+
+    private void flashVideo() {
+        mVideoView.animate().cancel();
+        mVideoView.setAlpha(0.25f);
+        mVideoView.animate().alpha(1f).setDuration(250).start();
+    }
+
+    private void startRecording() {
+        if (!mStreamConnected || mFrameWidth == 0) {
+            showToastie(getString(R.string.toast_need_live));
+            return;
+        }
+        final int w = mFrameWidth, h = mFrameHeight;
+        mRecordButton.setEnabled(false);
+        mMediaExecutor.execute(() -> {
+            try {
+                mRecorder.start(getApplicationContext(), w, h, RECORD_FPS);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "record failed", e);
+                showToastie(getString(R.string.toast_record_failed, String.valueOf(e.getMessage())));
+            }
+            mUiHandler.post(() -> {
+                updateVideoUi();
+                mUiHandler.post(mRecTicker);
+            });
+        });
+    }
+
+    private void stopRecording() {
+        mUiHandler.removeCallbacks(mRecTicker);
+        mRecordButton.setEnabled(false);
+        mMediaExecutor.execute(() -> {
+            String where = mRecorder.stop();
+            if (where != null) {
+                showToastie(getString(R.string.toast_video_saved, where));
+            }
+            mUiHandler.post(this::updateVideoUi);
+        });
+    }
+
+    private final Runnable mRecTicker = new Runnable() {
+        @Override
+        public void run() {
+            if (!mRecorder.isRecording()) {
+                return;
+            }
+            long s = mRecorder.elapsedMs() / 1000;
+            mChipRec.setText(getString(R.string.chip_rec_fmt, (int) (s / 60), (int) (s % 60)));
+            mChipRec.setAlpha(((s & 1) == 0) ? 1f : 0.75f);
+            mUiHandler.postDelayed(this, 500);
+        }
+    };
+
+    private void updateVideoUi() {
+        if (mVideoView == null) {
+            return;
+        }
+        boolean recording = mRecorder.isRecording();
+        boolean showingVideo = mLiveWanted && mStreamConnected && mVideoView.hasFrame();
+
+        mVideoPlaceholder.setVisibility(showingVideo ? View.GONE : View.VISIBLE);
+        if (!mDroneReachable && !mStreamConnected) {
+            mVideoPlaceholderTitle.setText(R.string.video_no_drone);
+            mVideoPlaceholderSubtitle.setText(R.string.video_no_drone_hint);
+        } else if (!mCameraPresent && !mStreamConnected) {
+            mVideoPlaceholderTitle.setText(R.string.video_no_camera);
+            mVideoPlaceholderSubtitle.setText(R.string.video_no_camera_hint);
+        } else if (mLiveWanted) {
+            mVideoPlaceholderTitle.setText(R.string.video_connecting);
+            mVideoPlaceholderSubtitle.setText("");
+        } else {
+            mVideoPlaceholderTitle.setText(R.string.video_ready);
+            mVideoPlaceholderSubtitle.setText(R.string.video_ready_hint);
+        }
+
+        boolean cameraUsable = mCameraPresent || mStreamConnected;
+        mLiveButton.setEnabled(cameraUsable || mLiveWanted);
+        mLiveButton.setBackgroundResource(mLiveWanted ? R.drawable.bg_hud_button_active : R.drawable.bg_hud_button);
+        mLiveLabel.setText(mLiveWanted ? R.string.button_live : R.string.button_live_off);
+        mLiveButton.setAlpha(mLiveButton.isEnabled() ? 1f : 0.45f);
+
+        mPhotoButton.setEnabled(cameraUsable);
+        mPhotoButton.setAlpha(cameraUsable ? 1f : 0.45f);
+
+        mRecordButton.setEnabled(recording || mStreamConnected);
+        mRecordButton.setAlpha(mRecordButton.isEnabled() ? 1f : 0.45f);
+        mRecordButton.setImageResource(recording ? R.drawable.ic_stop : R.drawable.ic_record);
+        mRecordButton.setBackgroundResource(recording ? R.drawable.bg_record_button_active : R.drawable.bg_record_button);
+        mRecordLabel.setText(recording ? R.string.button_stop : R.string.button_record);
+
+        mChipLive.setVisibility(showingVideo ? View.VISIBLE : View.GONE);
+        mChipRec.setVisibility(recording ? View.VISIBLE : View.GONE);
     }
 
     private void initializeSounds() {
@@ -261,7 +595,8 @@ public class MainActivity extends EspActivity {
                         if(isCrazyradioAvailable(MainActivity.this)) {
                             connectCrazyradio();
                         } else {
-                            connectBlePreChecks();
+                            // ESP-Drone talks CRTP over the drone's Wi-Fi access point
+                            connect();
                         }
                     }
                 } catch (IllegalStateException e) {
@@ -371,6 +706,7 @@ public class MainActivity extends EspActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case MY_PERMISSIONS_REQUEST_LOCATION: {
                 // If request is cancelled, the result arrays are empty.
@@ -402,8 +738,10 @@ public class MainActivity extends EspActivity {
         mRingEffectButton.setEnabled(false);
         mHeadlightButton.setEnabled(false);
         mBuzzerSoundButton.setEnabled(false);
-        if (mPreferences.getBoolean(PreferencesActivity.KEY_PREF_IMMERSIVE_MODE_BOOL, false)) {
-            setHideyBar();
+        hideSystemBars();
+        mStatusPoller.start();
+        if (mLiveWanted) {
+            startLive();
         }
         //mJoystickViewLeft.requestLayout();
     }
@@ -425,6 +763,15 @@ public class MainActivity extends EspActivity {
         }
         updateFlightData();
         mPresenter.disconnect();
+        mStatusPoller.stop();
+        if (mRecorder.isRecording()) {
+            stopRecording();
+        }
+        if (mStreamReader != null) {
+            mStreamReader.stop();
+            mStreamReader = null;
+        }
+        mStreamConnected = false;
     }
 
     @Override
@@ -434,37 +781,32 @@ public class MainActivity extends EspActivity {
         mSoundPool.release();
         mSoundPool = null;
         mPresenter.onDestroy();
+        mUiHandler.removeCallbacksAndMessages(null);
+        mMediaExecutor.shutdown();
+        DroneNetwork.stop();
         super.onDestroy();
     }
 
-    @Override
-    public void onBackPressed() {
-        if (mDoubleBackToExitPressedOnce) {
-            super.onBackPressed();
-            return;
-        }
-        this.mDoubleBackToExitPressedOnce = true;
-        Toast.makeText(this, "Please click BACK again to exit", Toast.LENGTH_SHORT).show();
-        new Handler().postDelayed(new Runnable() {
-
-            @Override
-            public void run() {
-                mDoubleBackToExitPressedOnce = false;
-
+    /** Back (button or predictive gesture) must be pressed twice so a stray swipe cannot quit mid-flight. */
+    private final androidx.activity.OnBackPressedCallback mBackCallback = new androidx.activity.OnBackPressedCallback(true) {
+        @Override
+        public void handleOnBackPressed() {
+            if (mDoubleBackToExitPressedOnce) {
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+                return;
             }
-        }, 2000);
-    }
+            mDoubleBackToExitPressedOnce = true;
+            Toast.makeText(MainActivity.this, "Press BACK again to exit", Toast.LENGTH_SHORT).show();
+            mUiHandler.postDelayed(() -> mDoubleBackToExitPressedOnce = false, 2000);
+        }
+    };
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if(mPreferences.getBoolean(PreferencesActivity.KEY_PREF_IMMERSIVE_MODE_BOOL, false) && hasFocus){
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    setHideyBar();
-                }
-            }, 2000);
+        if (hasFocus) {
+            hideSystemBars();
         }
     }
 
@@ -688,23 +1030,51 @@ public class MainActivity extends EspActivity {
         return !usbDeviceList.isEmpty();
     }
 
-    public void setBatteryLevel(float battery) {
-        float normalizedBattery = battery - 3.0f;
-        int batteryPercentage = (int) (normalizedBattery * 100);
-        if (battery == -1f) {
-            batteryPercentage = 0;
-        } else if (normalizedBattery < 0f && normalizedBattery > -1f) {
-            batteryPercentage = 0;
-        } else if (normalizedBattery > 1f) {
-            batteryPercentage = 100;
+    /** 1S LiPo open-circuit voltage at 0,5..100 % (same table as the firmware). */
+    private static final float[] LIPO_1S = {
+            3.27f, 3.61f, 3.69f, 3.71f, 3.73f, 3.75f, 3.77f, 3.79f, 3.80f, 3.82f,
+            3.84f, 3.85f, 3.87f, 3.91f, 3.95f, 3.98f, 4.02f, 4.08f, 4.11f, 4.15f, 4.20f};
+
+    public static int percentFromVoltage(float v) {
+        if (v <= 0f) {
+            return -1;
         }
-        //TODO: FIXME
-        final int fBatteryPercentage = batteryPercentage;
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mTextView_battery.setText(format(R.string.battery_text, fBatteryPercentage));
+        if (v <= LIPO_1S[0]) {
+            return 0;
+        }
+        for (int i = 1; i < LIPO_1S.length; i++) {
+            if (v < LIPO_1S[i]) {
+                float frac = (v - LIPO_1S[i - 1]) / (LIPO_1S[i] - LIPO_1S[i - 1]);
+                return Math.round((i - 1) * 5 + frac * 5);
             }
+        }
+        return 100;
+    }
+
+    /** Legacy entry point: voltage only (or -1 for unknown). */
+    public void setBatteryLevel(float voltage) {
+        setBattery(percentFromVoltage(voltage), voltage);
+    }
+
+    /** @param percent 0..100 or -1 when unknown; @param voltage battery volts or <= 0 */
+    public void setBattery(final int percent, final float voltage) {
+        runOnUiThread(() -> {
+            if (mTextView_battery == null) {
+                return;
+            }
+            if (percent < 0) {
+                mTextView_battery.setText("--%");
+                mTextView_battery.setTextColor(ContextCompat.getColor(this, R.color.brand_on_surface));
+                mTextView_batteryVoltage.setText("");
+            } else {
+                int p = Math.max(0, Math.min(100, percent));
+                mTextView_battery.setText(format(R.string.battery_text, p));
+                mTextView_battery.setTextColor(p <= 20 ? BatteryView.colorFor(this, p)
+                        : ContextCompat.getColor(this, R.color.brand_on_surface));
+                mTextView_batteryVoltage.setText(voltage > 0
+                        ? String.format(Locale.US, getString(R.string.battery_voltage_fmt), voltage) : "");
+            }
+            mBatteryView.setPercent(percent < 0 ? -1 : Math.min(100, percent));
         });
     }
 
@@ -782,7 +1152,7 @@ public class MainActivity extends EspActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mHeadlightButton.setColorFilter(toggle ? Color.parseColor("#00FF00") : Color.BLACK);
+                mHeadlightButton.setColorFilter(toggle ? ContextCompat.getColor(MainActivity.this, R.color.brand_primary) : Color.WHITE);
             }
         });
     }

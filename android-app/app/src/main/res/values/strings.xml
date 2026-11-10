@@ -1,11 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">ESP-Drone</string>
-    <string name="title_activity_main">ESP-Drone</string>
+    <string name="app_name">Max Imagination Drone</string>
+    <string name="title_activity_main">Max Imagination Drone</string>
+
+    <!-- Brand -->
+    <string name="brand_name">MAX IMAGINATION</string>
+    <string name="brand_product">XIAO ESP32-S3 Drone</string>
+
+    <!-- Camera / HUD -->
+    <string name="chip_live">● LIVE</string>
+    <string name="chip_rec">● REC 00:00</string>
+    <string name="chip_rec_fmt">● REC %1$02d:%2$02d</string>
+    <string name="button_photo">Photo</string>
+    <string name="button_record">Record</string>
+    <string name="button_stop">Stop</string>
+    <string name="button_live">Live</string>
+    <string name="button_live_off">Go live</string>
+    <string name="hlock_contentDescription">Lock horizontal axis of left stick</string>
+    <string name="battery_voltage_fmt">%1$.2fV</string>
+    <string name="video_no_drone">Drone not reachable</string>
+    <string name="video_no_drone_hint">Join the drone Wi-Fi (ESP-DRONE_…, password 12345678) and tap connect.</string>
+    <string name="video_no_camera">No camera detected</string>
+    <string name="video_no_camera_hint">Live video, photos and recording need a XIAO ESP32-S3 Sense camera board on the drone.</string>
+    <string name="video_ready">Camera ready</string>
+    <string name="video_ready_hint">Tap Live to start the video feed. Double-tap the video to switch fit / fill.</string>
+    <string name="video_connecting">Connecting to camera…</string>
+    <string name="toast_photo_saved">Photo saved to %1$s</string>
+    <string name="toast_video_saved">Video saved to %1$s</string>
+    <string name="toast_need_live">Start the live feed first</string>
+    <string name="toast_no_camera">No camera on the drone</string>
+    <string name="toast_record_failed">Recording failed: %1$s</string>
+    <string name="toast_photo_failed">Photo failed: %1$s</string>
 
     <!-- Header -->
-    <string name="battery_text">%1$3d%%</string>
+    <string name="battery_text">%1$d%%</string>
     <string name="batteryIconContentDescription">Battery icon</string>
     <string name="linkQuality_text">%1$3s</string>
     <string name="linkQualityIconContentDescription">Link quality icon</string>
@@ -16,7 +45,7 @@
     <string name="menu_disconnect">Disconnect</string>
     <string name="menu_preferences">Preferences</string>
     <string name="menu_preferences_ContentDescription">Preferences button</string>
-    <string name="preferences_title">Crazyflie Client settings</string>
+    <string name="preferences_title">Drone settings</string>
 
     <string name="button_ledring_contentDescription">LED ring button</string>
     <string name="button_headlight_contentDescription">Headlight button</string>

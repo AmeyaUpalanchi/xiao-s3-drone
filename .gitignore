@@ -7,3 +7,4 @@ android-app/.idea/
 android-app/local.properties
 *.iml
 .DS_Store
+dist/

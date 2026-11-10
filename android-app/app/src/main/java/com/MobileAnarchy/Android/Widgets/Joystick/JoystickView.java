@@ -110,15 +110,18 @@ public class JoystickView extends View {
     private void initJoystickView() {
         setFocusable(true);
 
+        float density = getResources().getDisplayMetrics().density;
         bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bgPaint.setColor(Color.BLACK);
-        bgPaint.setStrokeWidth(2);
+        bgPaint.setColor(Color.WHITE);
+        bgPaint.setAlpha(150);
+        bgPaint.setStrokeWidth(2.5f * density);
         bgPaint.setStyle(Paint.Style.STROKE);
 
         handlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        handlePaint.setColor(Color.GRAY);
+        handlePaint.setColor(androidx.core.content.ContextCompat.getColor(getContext(),
+                com.espressif.espdrone.android.R.color.brand_primary));
         handlePaint.setStrokeWidth(1);
-        handlePaint.setAlpha(100);
+        handlePaint.setAlpha(190);
         handlePaint.setStyle(Paint.Style.FILL_AND_STROKE);
 
         innerPadding = 10;

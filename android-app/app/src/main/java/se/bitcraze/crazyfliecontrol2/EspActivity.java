@@ -32,7 +32,8 @@ public abstract class EspActivity extends AppCompatActivity {
 
         mBroadcastData = new MutableLiveData<>();
         IntentFilter filter = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-        registerReceiver(mReceiver, filter);
+        androidx.core.content.ContextCompat.registerReceiver(this, mReceiver, filter,
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED);
     }
 
     @Override

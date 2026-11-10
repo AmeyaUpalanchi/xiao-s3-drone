@@ -91,7 +91,8 @@ public class UsbLinkAndroid implements CrazyUsbInterface{
         //request permissions
         if (mUsbDevice != null && !mUsbManager.hasPermission(mUsbDevice)) {
             Log.d(LOG_TAG, "Request permission");
-            mPermissionIntent = PendingIntent.getBroadcast(mContext, 0, new Intent(mContext.getPackageName()+".USB_PERMISSION"), 0);
+            Intent permission = new Intent(mContext.getPackageName() + ".USB_PERMISSION").setPackage(mContext.getPackageName());
+            mPermissionIntent = PendingIntent.getBroadcast(mContext, 0, permission, PendingIntent.FLAG_MUTABLE);
             mUsbManager.requestPermission(mUsbDevice, mPermissionIntent);
         } else if (mUsbDevice != null && mUsbManager.hasPermission(mUsbDevice)) {
             Log.d(LOG_TAG, "Has permission");

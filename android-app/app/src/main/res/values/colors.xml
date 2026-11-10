@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        BRAND PALETTE  (Max Imagination)
+        Placeholder values - replace these hex codes with the official brand colours.
+        Every screen, button, joystick and the launcher icon reads from this file only.
+    -->
+    <color name="brand_primary">#FF6A13</color>        <!-- action / accent (orange) -->
+    <color name="brand_primary_dark">#C94E05</color>
+    <color name="brand_secondary">#00C2FF</color>      <!-- highlights / links (cyan) -->
+    <color name="brand_background">#0A0F1E</color>     <!-- app background (deep navy) -->
+    <color name="brand_surface">#141B2D</color>        <!-- cards, buttons -->
+    <color name="brand_surface_high">#1F2940</color>
+    <color name="brand_on_surface">#E8ECF4</color>     <!-- primary text -->
+    <color name="brand_muted">#8A94A8</color>          <!-- secondary text -->
+
+    <!-- Status colours -->
+    <color name="status_ok">#2ED573</color>
+    <color name="status_warn">#FFB020</color>
+    <color name="status_danger">#FF3B4E</color>
+
+    <!-- Derived HUD colours -->
+    <color name="hud_scrim">#CC0A0F1E</color>
+    <color name="hud_scrim_light">#800A0F1E</color>
+    <color name="hud_button">#B3141B2D</color>
+    <color name="hud_button_pressed">#E61F2940</color>
+    <color name="hud_stroke">#33FFFFFF</color>
+    <color name="transparent">#00000000</color>
+</resources>

@@ -309,7 +309,9 @@ public class MainPresenter {
         }
 
         // link quality is not available when there is no active connection
-        mainActivity.setLinkQualityText("N/A");
+        if (mainActivity != null) {
+            mainActivity.setLinkQualityText("N/A");
+        }
     }
 
     public void enableAltHoldMode(boolean hover) {
@@ -364,9 +366,13 @@ public class MainPresenter {
         public void logDataReceived(LogConfig logConfig, Map<String, Number> data, int timestamp) {
             super.logDataReceived(logConfig, data, timestamp);
 
-            if ("Standard".equals(logConfig.getName())) {
-                final float battery = (float) data.get("pm.vbat");
-                mainActivity.setBatteryLevel(battery);
+            if ("Standard".equals(logConfig.getName()) && mainActivity != null) {
+                Number vbat = data.get("pm.vbat");
+                Number level = data.get("pm.batteryLevel");
+                float voltage = vbat != null ? vbat.floatValue() : -1f;
+                // Firmware >= xiao port reports a real 0..100 % in pm.batteryLevel
+                int percent = level != null ? level.intValue() : MainActivity.percentFromVoltage(voltage);
+                mainActivity.setBattery(percent, voltage);
             }
             for (Map.Entry<String, Number> entry : data.entrySet()) {
                 Log.d(LOG_TAG, "\t Name: " + entry.getKey() + ", data: " + entry.getValue());
@@ -378,6 +384,9 @@ public class MainPresenter {
     private LogConfig createDefaultLogConfig() {
         LogConfig logConfigStandard = new LogConfig("Standard", 1000);
         logConfigStandard.addVariable("pm.vbat", VariableType.FLOAT);
+        if (mLogToc != null && mLogToc.getElementByCompleteName("pm.batteryLevel") != null) {
+            logConfigStandard.addVariable("pm.batteryLevel", VariableType.UINT8_T);
+        }
         return logConfigStandard;
     }
 

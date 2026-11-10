@@ -1,42 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.espressif.espdrone.android"
-    android:versionCode="19"
-    android:versionName="0.7.3" >
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-feature
-        android:name="android.hardware.usb.host"
-        android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="true" />
 
-    <uses-feature
-        android:name="android.hardware.bluetooth_le"
-        android:required="false"/>
-
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Wi-Fi link to the drone (CRTP over UDP + camera over HTTP) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Legacy Crazyflie BLE link (kept from the upstream client) -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+
+    <!-- Photos/videos go to MediaStore (no permission needed on Android 10+) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true">
+
         <activity
             android:name="se.bitcraze.crazyfliecontrol2.MainActivity"
+            android:exported="true"
             android:label="@string/title_activity_main"
             android:launchMode="singleTop"
-            android:configChanges="orientation|screenSize"
-            android:screenOrientation="sensorLandscape" >
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/AppTheme.Fullscreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
@@ -49,18 +55,20 @@
         </activity>
         <activity
             android:name="se.bitcraze.crazyfliecontrol.prefs.PreferencesActivity"
-            android:theme="@android:style/Theme.Holo.Light"
-            android:screenOrientation="sensorLandscape" >
+            android:exported="false"
+            android:theme="@style/AppTheme.Settings"
+            android:screenOrientation="sensorLandscape">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="se.bitcraze.crazyfliecontrol2.MainActivity" />
         </activity>
         <activity
             android:name="se.bitcraze.crazyfliecontrol.bootloader.BootloaderActivity"
-            android:theme="@android:style/Theme.Holo.Light"
+            android:exported="false"
+            android:theme="@style/AppTheme.Settings"
             android:screenOrientation="sensorLandscape"
             android:label="@string/title_activity_bootloader"
-            android:parentActivityName="se.bitcraze.crazyfliecontrol.prefs.PreferencesActivity" >
+            android:parentActivityName="se.bitcraze.crazyfliecontrol.prefs.PreferencesActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="se.bitcraze.crazyfliecontrol.prefs.PreferencesActivity" />
