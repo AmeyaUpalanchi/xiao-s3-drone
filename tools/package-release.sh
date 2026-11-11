@@ -30,6 +30,7 @@ done
 chmod +x "$OUT/firmware/flash-mac-linux.sh"
 cp "$ROOT/tools/LICENSES.md" "$ROOT/android-app/licenses/Sora-OFL.txt" "$OUT/"
 [ -f "$ROOT/tools/CHANGELOG.md" ] && cp "$ROOT/tools/CHANGELOG.md" "$OUT/"
+[ -f "$ROOT/docs/quick-guide/XIAO_S3_Drone_Quick_Guide.pdf" ] && cp "$ROOT/docs/quick-guide/XIAO_S3_Drone_Quick_Guide.pdf" "$OUT/"
 ( cd "$OUT" && find . -type f ! -name SHA256SUMS.txt | sort | xargs shasum -a 256 > SHA256SUMS.txt )
 ( cd "$ROOT/dist" && zip -qr "TheDroneCommunity-v$VERSION.zip" "TheDroneCommunity-v$VERSION" )
 echo "Done: $OUT.zip"

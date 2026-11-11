@@ -1,0 +1,319 @@
+<!doctype html><html><head><meta charset="utf-8"><title>XIAO S3 Drone Quick Guide</title>
+<style>
+@font-face { font-family: Sora; src: url(fonts/Sora-Regular.ttf); font-weight: 400; }
+@font-face { font-family: Sora; src: url(fonts/Sora-SemiBold.ttf); font-weight: 600; }
+@font-face { font-family: Sora; src: url(fonts/Sora-Bold.ttf); font-weight: 700; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #fff; }
+body { font-family: Sora, sans-serif; color: #1c1c1c; -webkit-font-smoothing: antialiased; }
+.page { position: relative; width: 596px; height: 843px; overflow: hidden; background: #fff; }
+header { position: absolute; left: 30px; right: 30px; top: 26px; display: flex; justify-content: space-between;
+  align-items: flex-end; padding-bottom: 7px; border-bottom: 3px solid #1c1c1c; }
+h1 { font-size: 25px; font-weight: 700; letter-spacing: -0.6px; line-height: 1; }
+h1 em { font-style: normal; color: #E2572B; }
+.sub { margin-top: 5px; font-size: 8.4px; color: #4a4a4a; letter-spacing: 0.1px; }
+.org { font-size: 7.6px; color: #4a4a4a; text-align: right; line-height: 1.45; }
+.org b { color: #1c1c1c; font-weight: 600; }
+.board { position: absolute; background: #0b0b0b; border-radius: 10px; padding: 6px; }
+.board img { width: 100%; height: 100%; display: block; border-radius: 4px; }
+.lbl { position: absolute; width: 112px; padding-bottom: 3px; border-bottom: 0.6px solid #cfcfcf; }
+.lbl b { display: block; font-size: 8px; font-weight: 700; line-height: 1.25; }
+.lbl span { display: block; font-size: 6.6px; color: #555; line-height: 1.35; }
+.lbl.r { text-align: right; }
+.leaders { position: absolute; left: 0; top: 0; pointer-events: none; }
+.leaders polyline { fill: none; stroke: #E2572B; stroke-width: 0.75; }
+.leaders .ring { fill: none; stroke: #E2572B; stroke-width: 0.9; }
+.leaders .dot { fill: #E2572B; }
+.panel { position: absolute; border: 0.8px solid #d9d9d9; border-radius: 7px; padding: 10px 11px 9px; background: #fff; }
+.panel.warm { background: #FDF2EC; border-color: #E7835E; }
+h2 { font-size: 10.2px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+h2 i { font-style: normal; color: #E2572B; margin-right: 4px; }
+p, li, td, th { font-size: 7.5px; line-height: 1.5; }
+p + p { margin-top: 4px; }
+b { font-weight: 700; }
+code { font-family: Menlo, monospace; font-size: 6.7px; background: #f1f1f1; border-radius: 2px; padding: 0.5px 2px; }
+.p-motors { left: 30px; top: 388px; width: 262px; height: 408px; }
+.p-battery { left: 304px; top: 388px; width: 262px; height: 174px; }
+.p-lights { left: 304px; top: 570px; width: 262px; height: 226px; }
+.quad { position: absolute; left: 6px; top: 58px; width: 250px; height: 222px; }
+.quad .prop { fill: none; stroke: #b9b9b9; stroke-width: 1; stroke-dasharray: 3 3; }
+.quad .mot { fill: #555; }
+.quad .fc { font-family: Sora; font-size: 8px; font-weight: 700; fill: #fff; text-anchor: middle; }
+.quad .front { font-family: Sora; font-size: 8px; font-weight: 700; fill: #1c1c1c; text-anchor: middle; }
+.ml { position: absolute; width: 118px; text-align: center; }
+.ml b { display: block; font-size: 7.8px; font-weight: 700; }
+.ml span { display: block; font-size: 6.6px; color: #555; }
+.ml.tl { left: 4px; top: 34px; } .ml.tr { right: 4px; top: 34px; }
+.ml.bl { left: 4px; top: 282px; } .ml.br { right: 4px; top: 282px; }
+.props { position: absolute; left: 11px; right: 11px; top: 316px; display: flex; gap: 12px; align-items: center; justify-content: center;
+  font-size: 7.4px; background: #f4f4f4; border-radius: 5px; padding: 5px 8px; }
+.props s { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: -0.5px; }
+.props .cw { background: #2a4fa8; } .props .ccw { background: #E2572B; }
+.p-motors .note { position: absolute; left: 11px; right: 11px; bottom: 9px; }
+table { width: 100%; border-collapse: collapse; }
+.lights td, .trouble th, .trouble td { vertical-align: top; padding: 2.2px 3px; border-bottom: 0.6px solid #e2e2e2; text-align: left; }
+.lights td:first-child { width: 88px; white-space: nowrap; }
+.lights s { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; vertical-align: 0px; }
+.trouble th { width: 80px; font-weight: 700; }
+.grid { position: absolute; left: 30px; right: 30px; top: 88px; display: grid; grid-template-columns: 1fr 1fr;
+  grid-template-rows: 228px 266px 180px; gap: 9px; }
+.grid .panel { position: relative; }
+ol, ul { padding-left: 13px; }
+li { margin-bottom: 1.6px; }
+.grid p { margin-top: 4px; }
+footer { position: absolute; left: 30px; right: 30px; bottom: 22px; border-top: 0.8px solid #cfcfcf; padding-top: 6px;
+  display: flex; justify-content: space-between; font-size: 6.9px; color: #555; line-height: 1.45; }
+footer .rt { text-align: right; }
+</style></head><body>
+<section class="page">
+  <header>
+    <div>
+      <h1>XIAO S3 Drone <em>Quick Guide</em></h1>
+      <p class="sub">Seeed XIAO ESP32-S3 flight board for brushed micro quads · fly it from the Android app</p>
+    </div>
+    <div class="org">The Drone Community<br>Open source hardware + firmware</div>
+  </header>
+
+  <div class="board" style="left:155px;top:86px;width:286px;height:286px">
+    <img src="pcb1-top.png" alt="PCB1 top">
+  </div>
+  <div class="lbl l" style="top:83.0px;left:30px"><b>Motor M4, front left</b><span>D0 · GPIO 1 · spins CCW</span></div>
+<div class="lbl l" style="top:126.0px;left:30px"><b>3V3 test point</b><span>From the XIAO regulator</span></div>
+<div class="lbl l" style="top:169.0px;left:30px"><b>IMU header (MPU-6050)</b><span>GY-521 module · I²C D4/D5 · AD0 to GND</span></div>
+<div class="lbl l" style="top:212.0px;left:30px"><b>Arm lights LED1-LED4</b><span>2 white + 2 red, on with the battery</span></div>
+<div class="lbl l" style="top:255.0px;left:30px"><b>Battery protection</b><span>Reverse-polarity MOSFET + TVS</span></div>
+<div class="lbl l" style="top:298.0px;left:30px"><b>BT+ battery pad</b><span>1S LiPo +, XT30 or soldered lead</span></div>
+<div class="lbl l" style="top:341.0px;left:30px"><b>Motor M3, rear left</b><span>D2 · GPIO 3 · spins CW</span></div>
+<div class="lbl r" style="top:83.0px;left:454px"><b>Motor M1, front right</b><span>D3 · GPIO 4 · spins CW</span></div>
+<div class="lbl r" style="top:119.9px;left:454px"><b>USB-C end = FRONT</b><span>Fit the XIAO with USB-C facing forward</span></div>
+<div class="lbl r" style="top:156.7px;left:454px"><b>XIAO ESP32-S3 brain</b><span>Wi-Fi, 8 MB flash, 8 MB PSRAM</span></div>
+<div class="lbl r" style="top:193.6px;left:454px"><b>2 × Qwiic I²C ports</b><span>Height sensor (VL53L1X) and add-ons</span></div>
+<div class="lbl r" style="top:230.4px;left:454px"><b>5 V test point</b><span>Output of the boost converter</span></div>
+<div class="lbl r" style="top:267.3px;left:454px"><b>5 V boost converter</b><span>Runs the XIAO from the 1S pack</span></div>
+<div class="lbl r" style="top:304.1px;left:454px"><b>BT− battery pad</b><span>1S LiPo −</span></div>
+<div class="lbl r" style="top:341.0px;left:454px"><b>Motor M2, rear right</b><span>D7 · GPIO 44 · spins CCW</span></div>
+  <svg class="leaders" width="596" height="843" viewBox="0 0 596 843"><polyline points="144,98.0 151,98.0 213.1,110.5" />
+<circle cx="213.1" cy="110.5" r="2.6" class="ring"/>
+<circle cx="213.1" cy="110.5" r="0.9" class="dot"/>
+<polyline points="144,141.0 151,141.0 227.9,177.4" />
+<circle cx="227.9" cy="177.4" r="2.6" class="ring"/>
+<circle cx="227.9" cy="177.4" r="0.9" class="dot"/>
+<polyline points="144,184.0 151,184.0 197.7,224.2" />
+<circle cx="197.7" cy="224.2" r="2.6" class="ring"/>
+<circle cx="197.7" cy="224.2" r="0.9" class="dot"/>
+<polyline points="144,227.0 151,227.0 237.0,277.0" />
+<circle cx="237.0" cy="277.0" r="2.6" class="ring"/>
+<circle cx="237.0" cy="277.0" r="0.9" class="dot"/>
+<polyline points="144,270.0 151,270.0 280.9,296.1" />
+<circle cx="280.9" cy="296.1" r="2.6" class="ring"/>
+<circle cx="280.9" cy="296.1" r="0.9" class="dot"/>
+<polyline points="144,313.0 151,313.0 280.2,319.4" />
+<circle cx="280.2" cy="319.4" r="2.6" class="ring"/>
+<circle cx="280.2" cy="319.4" r="0.9" class="dot"/>
+<polyline points="144,356.0 151,356.0 213.1,336.5" />
+<circle cx="213.1" cy="336.5" r="2.6" class="ring"/>
+<circle cx="213.1" cy="336.5" r="0.9" class="dot"/>
+<polyline points="452,98.0 445,98.0 373.4,110.5" />
+<circle cx="373.4" cy="110.5" r="2.6" class="ring"/>
+<circle cx="373.4" cy="110.5" r="0.9" class="dot"/>
+<polyline points="452,134.9 445,134.9 293.2,124.2" />
+<circle cx="293.2" cy="124.2" r="2.6" class="ring"/>
+<circle cx="293.2" cy="124.2" r="0.9" class="dot"/>
+<polyline points="452,171.7 445,171.7 311.7,174.2" />
+<circle cx="311.7" cy="174.2" r="2.6" class="ring"/>
+<circle cx="311.7" cy="174.2" r="0.9" class="dot"/>
+<polyline points="452,208.6 445,208.6 370.6,182.4" />
+<circle cx="370.6" cy="182.4" r="2.6" class="ring"/>
+<circle cx="370.6" cy="182.4" r="0.9" class="dot"/>
+<polyline points="452,245.4 445,245.4 348.7,239.7" />
+<circle cx="348.7" cy="239.7" r="2.6" class="ring"/>
+<circle cx="348.7" cy="239.7" r="0.9" class="dot"/>
+<polyline points="452,282.3 445,282.3 365.1,277.0" />
+<circle cx="365.1" cy="277.0" r="2.6" class="ring"/>
+<circle cx="365.1" cy="277.0" r="0.9" class="dot"/>
+<polyline points="452,319.1 445,319.1 306.2,319.4" />
+<circle cx="306.2" cy="319.4" r="2.6" class="ring"/>
+<circle cx="306.2" cy="319.4" r="0.9" class="dot"/>
+<polyline points="452,356.0 445,356.0 373.4,336.5" />
+<circle cx="373.4" cy="336.5" r="2.6" class="ring"/>
+<circle cx="373.4" cy="336.5" r="0.9" class="dot"/></svg>
+
+  <div class="panel p-motors">
+    <h2><i>1</i> Motors (plug into M1 to M4)</h2>
+    <div class="ml tl"><b>M4 · GPIO 1 · CCW</b><span>black / white wire motor</span></div>
+    <div class="ml tr"><b>M1 · GPIO 4 · CW</b><span>red / blue wire motor</span></div>
+    
+<svg class="quad" viewBox="0 0 250 222" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 z" fill="#1d1d1d"/></marker>
+    <marker id="ao" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 z" fill="#E2572B"/></marker>
+  </defs>
+  <!-- arms -->
+  <g stroke="#2a4fa8" stroke-width="9" stroke-linecap="round">
+    <line x1="125" y1="111" x2="52" y2="48"/><line x1="125" y1="111" x2="198" y2="48"/>
+    <line x1="125" y1="111" x2="52" y2="174"/><line x1="125" y1="111" x2="198" y2="174"/>
+  </g>
+  <!-- body -->
+  <rect x="95" y="80" width="60" height="62" rx="7" fill="#2a4fa8"/>
+  <rect x="112" y="72" width="26" height="11" rx="2" fill="#222"/>
+  <text x="125" y="115" class="fc">XIAO</text>
+  <line x1="125" y1="66" x2="125" y2="36" stroke="#E2572B" stroke-width="2.2" marker-end="url(#ao)"/>
+  <text x="125" y="28" class="front">FRONT</text>
+  <!-- props + motors -->
+  <g>
+    <circle cx="52" cy="48" r="27" class="prop"/><circle cx="198" cy="48" r="27" class="prop"/>
+    <circle cx="52" cy="174" r="27" class="prop"/><circle cx="198" cy="174" r="27" class="prop"/>
+    <circle cx="52" cy="48" r="10" class="mot"/><circle cx="198" cy="48" r="10" class="mot"/>
+    <circle cx="52" cy="174" r="10" class="mot"/><circle cx="198" cy="174" r="10" class="mot"/>
+    <circle cx="52" cy="48" r="2.4" fill="#fff"/><circle cx="198" cy="48" r="2.4" fill="#fff"/>
+    <circle cx="52" cy="174" r="2.4" fill="#fff"/><circle cx="198" cy="174" r="2.4" fill="#fff"/>
+  </g>
+  <!-- spin arrows: M4 CCW, M1 CW, M3 CW, M2 CCW -->
+  <g fill="none" stroke="#1d1d1d" stroke-width="1.6">
+    <path d="M70,33 A21,21 0 0 0 33,36" marker-end="url(#ah)"/>
+    <path d="M180,33 A21,21 0 0 1 217,36" marker-end="url(#ah)"/>
+    <path d="M70,189 A21,21 0 0 1 33,186" marker-end="url(#ah)"/>
+    <path d="M180,189 A21,21 0 0 0 217,186" marker-end="url(#ah)"/>
+  </g>
+</svg>
+    <div class="ml bl"><b>M3 · GPIO 3 · CW</b><span>red / blue wire motor</span></div>
+    <div class="ml br"><b>M2 · GPIO 44 · CCW</b><span>black / white wire motor</span></div>
+    <div class="props"><span><b>Props</b></span><span><s class="cw"></s>M1 + M3: <b>CW</b> props</span><span><s class="ccw"></s>M2 + M4: <b>CCW</b> props</span></div>
+    <p class="note">720, 716 or 8520 coreless motors on 2-pin <b>JST-SH 1.0</b> plugs. Diagonal pairs spin the
+    same way, matching the arrows printed next to each plug. If a motor turns the wrong way, swap its two wires.
+    Then check every motor with <b>Motor test</b> in the app (gear button).</p>
+  </div>
+
+  <div class="panel warm p-battery">
+    <h2><i>2</i> Battery</h2>
+    <p><b>1S LiPo, 3.7 V</b>, high-C (e.g. 300 to 600 mAh). Solder an XT30 or short leads to <b>BT+ / BT−</b>.</p>
+    <p><b>Reverse-polarity protected</b> (MOSFET + TVS), but still check + and − before the first plug-in.</p>
+    <p><b>Charge it off the drone</b> with a 1S charger. The XIAO's USB-C only powers the XIAO for flashing;
+    motors and arm lights stay off.</p>
+    <p>The app shows battery % and minutes left, warns at <b>25 %</b> and <b>15 %</b>, and the drone lands
+    itself when the cell stays under 3.2 V. Land at about 3.5 V. <b>Unplug after flying:</b> the 5 V boost
+    and arm lights keep drawing current.</p>
+  </div>
+
+  <div class="panel p-lights">
+    <h2><i>3</i> What the lights mean</h2>
+    <table class="lights">
+      <tr><td><s style="background:#F28A2E"></s><b>Orange solid</b></td><td>Starting up. Keep it still.</td></tr>
+      <tr><td><s style="background:#F28A2E"></s><b>Blink every 2 s</b></td><td>Running normally. Ready to connect.</td></tr>
+      <tr><td><s style="background:#F28A2E"></s><b>Quick bursts</b></td><td>Self-test failed. The USB serial log says why.</td></tr>
+      <tr><td><s style="background:#9a9a9a"></s><b>Keeps rebooting</b></td><td>MPU-6050 not found. Reseat the module.</td></tr>
+      <tr><td><b>Arm lights</b></td><td>2 white, 2 red. On whenever a pack is connected.</td></tr>
+      <tr><td><b>Arm lights off</b></td><td>No 5 V with a pack connected: check the pack and the BT+ / BT− joints.</td></tr>
+      <tr><td><b>XIAO red LED</b></td><td>Flickers on USB power. Normal.</td></tr>
+      <tr><td><b>App: Arm is amber</b></td><td>The drone is armed. Motors can spin.</td></tr>
+    </table>
+  </div>
+
+  <footer>
+    <span>XIAO on 2 × 7-pin headers · GY-521 MPU-6050 on the 8-pin header · 2 × Qwiic · 4 × M3 holes</span>
+    <span>Page 1 of 2 · turn over</span>
+  </footer>
+</section>
+<section class="page">
+  <header>
+    <div>
+      <h1>Fly · Program · <em>Fix</em></h1>
+      <p class="sub">Everything you need from first power-up to writing your own code</p>
+    </div>
+    <div class="org">Wi-Fi <b>ESP-DRONE_…</b> · password <b>12345678</b><br>App <b>The Drone Community</b> (Android 8+)</div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <h2><i>4</i> First flight in 8 steps</h2>
+      <ol>
+        <li><b>Props off.</b> Fit the XIAO with USB-C to the front and the MPU-6050 module on its header.</li>
+        <li>Plug the motors in exactly as in diagram 1.</li>
+        <li>Connect the battery and set the drone down <b>level</b>. Hands off until the orange LED blinks every 2 s.</li>
+        <li>Open the app and tap <b>Connect</b>. Allow the drone's Wi-Fi when Android asks.</li>
+        <li>Gear → <b>Motor test</b>: right motor, right direction? Then <b>Level calibration</b> on a flat table.</li>
+        <li><b>Props on:</b> M1 + M3 <b>CW</b>, M2 + M4 <b>CCW</b> (front right + rear left are CW).</li>
+        <li>Let go of the left stick, tap <b>Arm</b>, push the left stick up slowly. Hover low over grass.</li>
+        <li>Land with the stick or <b>Land</b>, then <b>Disarm</b>. <b>Hold to stop</b> cuts the motors at once.
+            If Wi-Fi drops for 0.5 s the drone lands itself.</li>
+      </ol>
+    </div>
+
+    <div class="panel">
+      <h2><i>5</i> Program it (ESP-IDF)</h2>
+      <ol>
+        <li>Install <b>ESP-IDF 5.0</b> (Espressif installer, or <code>~/esp/esp-idf</code>).</li>
+        <li>Open the project's <code>firmware/</code> folder in a terminal and run <code>. ~/esp/esp-idf/export.sh</code>.</li>
+        <li><code>idf.py set-target esp32s3</code>, then <code>idf.py build</code>.</li>
+        <li>Plug in the XIAO's USB-C. No port? Hold <b>BOOT</b> while plugging in.</li>
+        <li><code>idf.py -p PORT flash monitor</code>. The log narrates the boot.</li>
+      </ol>
+      <p><b>No toolchain?</b> Flash <code>TheDroneCommunity-firmware-…-full.bin</code> at <b>0x0</b> with the
+      release's flash script or esptool-js in Chrome. After that, update over Wi-Fi from the app.</p>
+      <p><b>Change things</b> in <code>idf.py menuconfig</code> → ESPDrone Config: motor pins, camera, Wi-Fi
+      channel. Wi-Fi name, password and level trim live in the app.</p>
+      <p>Other ways in: <code>http://192.168.43.42/status</code> and <code>/api/…</code>, CRTP over UDP port
+      <code>2390</code>, camera at <code>:81/stream</code>.</p>
+    </div>
+
+    <div class="panel">
+      <h2><i>6</i> What it can do</h2>
+      <ul>
+        <li><b>XIAO ESP32-S3</b>: 2 cores at 240 MHz, Wi-Fi + Bluetooth LE, 8 MB flash, 8 MB PSRAM.</li>
+        <li><b>MPU-6050</b> 6-axis IMU on I²C (GPIO 5/6), read at 1 kHz.</li>
+        <li><b>4 brushed motor outputs</b>, MOSFET + flyback diode each, 15 kHz PWM. For 720, 716 and 8520 motors on 1S.</li>
+        <li><b>1 kHz stabiliser</b> from the Crazyflie / ESP-Drone firmware.</li>
+        <li><b>Android app</b>: arm, auto-land, hold-to-stop, flying styles, battery % and minutes left.</li>
+        <li><b>Camera</b> with the XIAO ESP32-S3 Sense: live video, photos, MP4 recording.</li>
+        <li><b>Height hold</b> with a VL53L1X on a Qwiic port, plus a Take off button.</li>
+        <li>Wireless firmware updates, own Wi-Fi name and password, motor test, find my drone.</li>
+        <li><b>Not on board:</b> barometer, GPS, optical flow. So no position hold.</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2><i>7</i> Something wrong?</h2>
+      <table class="trouble">
+        <tr><th>Keeps rebooting</th><td>MPU-6050 not found. Reseat the module; its pins must match the labels.</td></tr>
+        <tr><th>No drone Wi-Fi</th><td>Wait 5 s after power-on while it picks a quiet channel. Custom password? Enter it under gear → Wi-Fi.</td></tr>
+        <tr><th>Won't arm</th><td>Let go of the left stick. Is the app connected?</td></tr>
+        <tr><th>Drifts in hover</th><td>Level calibration on a flat table, then fine-trim in stick settings.</td></tr>
+        <tr><th>Flips on take-off</th><td>Wrong motor slot, spin or prop. Run Motor test, recheck diagram 1.</td></tr>
+        <tr><th>Motor 2 is dead</th><td>It's on GPIO 44 (D7). Wired to D8 instead? Set MOTOR02_PIN to 7.</td></tr>
+        <tr><th>Resets at full throttle</th><td>Pack sagging: high-C pack, bulk capacitor, check for worn motors.</td></tr>
+        <tr><th>Disarms by itself</th><td>By design: 20 s idle on the ground, or the app disconnected.</td></tr>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2><i>8</i> Upgrades</h2>
+      <ul>
+        <li><b>XIAO ESP32-S3 Sense</b> camera board: FPV video, photos and recording in the app.</li>
+        <li><b>VL53L1X</b> time-of-flight sensor on a Qwiic port: altitude hold and Take off.</li>
+        <li><b>Bulk capacitor</b> (470 µF low-ESR) across BT+ / BT−: steadier power at full throttle.</li>
+        <li><b>More I²C sensors</b> on the second Qwiic port. Spare XIAO pins: D6, D8, D9, D10.</li>
+        <li><b>8520 motors</b> or 65 mm props for more thrust and a lower hover throttle.</li>
+        <li><b>Your own code</b>: everything is open. Start in <code>menuconfig</code> and <code>flight_safety.c</code>.</li>
+      </ul>
+    </div>
+
+    <div class="panel warm">
+      <h2><i>9</i> Safety</h2>
+      <ul>
+        <li>Props off for every bench test, motor test and firmware update.</li>
+        <li>Never charge unattended or charge a puffed pack. Charge off the drone.</li>
+        <li>Fly away from faces, people and pets. Keep a thumb near <b>Hold to stop</b>.</li>
+        <li>Store LiPos at about 3.8 V, unplugged, in a fire-safe bag.</li>
+        <li>The default password <code>12345678</code> is public. Change it under gear → Wi-Fi before flying near others.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="f2">
+    <span><b>Source and releases:</b> the project's <code>firmware/</code> and <code>android-app/</code> folders ·
+    <code>TheDroneCommunity-v1.2.0.zip</code><br>Firmware: ESP-Drone / Crazyflie, GPL-3.0 · App: ESP-Drone-Android, GPL-2.0+ · Font: Sora, OFL</span>
+    <span class="rt">Help: The Drone Community group<br>thedronecommunity.com · Page 2 of 2</span>
+  </footer>
+</section></body></html>
