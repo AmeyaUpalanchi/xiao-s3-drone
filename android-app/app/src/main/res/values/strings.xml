@@ -114,6 +114,12 @@
     <string name="toast_finding_wifi">Looking for the drone\'s Wi-Fi…</string>
     <string name="toast_wifi_failed">Couldn\'t find the drone\'s Wi-Fi. Is it switched on and nearby?</string>
     <string name="button_connecting">Connecting…</string>
+    <string name="button_searching">Searching…</string>
+    <string name="nodrone_title">No drone found</string>
+    <string name="nodrone_message">The phone couldn\'t see a drone Wi-Fi network (ESP-DRONE_…).\n\n• Is the drone switched on, with its arm lights lit?\n• Wait about 5 seconds after power-on before tapping Connect.\n• Stay within a few metres for the first connection.\n• Gave the drone its own password? Enter it under the gear, then Wi-Fi.\n\nYou can also join ESP-DRONE_… in Wi-Fi settings (password 12345678) and come back.</string>
+    <string name="nodrone_retry">Try again</string>
+    <string name="nodrone_wifi_settings">Wi-Fi settings</string>
+    <string name="nodrone_close">Close</string>
     <string name="flight_time_fmt">~%1$d min</string>
     <string name="flight_time_short">&lt;1 min</string>
 

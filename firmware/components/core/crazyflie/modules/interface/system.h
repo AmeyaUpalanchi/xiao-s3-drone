@@ -42,5 +42,7 @@ void systemSetCanFly(bool val);
 bool systemCanFly(void);
 void systemSetArmed(bool val);
 bool systemIsArmed();
+/** true once the boot self-test passed (false e.g. when the IMU is missing). */
+bool systemIsSelftestPassed(void);
 
 #endif //__SYSTEM_H__

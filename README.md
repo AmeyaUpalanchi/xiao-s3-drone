@@ -99,7 +99,7 @@ Wi-Fi: SSID `ESP-DRONE_<mac>`, password `12345678`, drone IP `192.168.43.42`.
 
 ## Release package
 
-`dist/TheDroneCommunity-v1.2.0.zip` holds everything a community member needs:
+`dist/TheDroneCommunity-v1.2.1.zip` holds everything a community member needs:
 - the app
 - a single-file firmware image with one-step flash scripts for Mac, Linux and Windows
 - the over-the-air update file

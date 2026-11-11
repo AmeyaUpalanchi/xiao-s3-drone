@@ -320,6 +320,11 @@ void systemSetArmed(bool val)
   armed = val;
 }
 
+bool systemIsSelftestPassed(void)
+{
+  return selftestPassed;
+}
+
 bool systemIsArmed()
 {
 

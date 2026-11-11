@@ -7,7 +7,7 @@
 #ifndef DRONE_API_H_
 #define DRONE_API_H_
 
-#define DRONE_FW_VERSION "1.2.0-tdc"
+#define DRONE_FW_VERSION "1.2.1-tdc"
 
 /** Start the web server on :80 (status, tools, firmware update). */
 void droneApiInit(void);

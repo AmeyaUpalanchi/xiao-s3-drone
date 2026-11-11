@@ -44,6 +44,8 @@ public final class DroneNetwork {
     }
 
     private static ConnectivityManager.NetworkCallback sJoinCallback;
+    /** How long Android's "Connect to device" sheet searches before giving up. */
+    private static final int JOIN_TIMEOUT_MS = 20_000;
 
     private static volatile Network sWifiNetwork;
     private static ConnectivityManager.NetworkCallback sCallback;
@@ -155,7 +157,7 @@ public final class DroneNetwork {
             }
         };
         try {
-            cm.requestNetwork(request, sJoinCallback, 45_000);
+            cm.requestNetwork(request, sJoinCallback, JOIN_TIMEOUT_MS);
         } catch (RuntimeException e) {
             Log.w(TAG, "requestNetwork failed", e);
             sJoinCallback = null;

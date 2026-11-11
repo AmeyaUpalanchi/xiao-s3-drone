@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+- App: Connect now says "Searching…" while Android looks for the drone, gives up after 20 s instead of 45 s,
+  and shows a "No drone found" dialog with what to check, Try again and Wi-Fi settings
+- App: the Connect button no longer stays on "Connecting…" when the drone link fails
+- Firmware: a missing or miswired MPU-6050 no longer makes the drone reboot in a loop; it stays on
+  Wi-Fi, refuses to fly and reports "imu": false in /status
+
 ## 1.2.0
 - Drone disarms by itself when idle on the ground for 20 s or when the app disconnects on the ground
 - Drone picks the quietest Wi-Fi channel (1, 6 or 11) at boot; shown in Drone settings

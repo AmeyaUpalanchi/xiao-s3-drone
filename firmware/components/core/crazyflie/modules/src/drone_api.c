@@ -38,6 +38,7 @@
 #include "pm_esplane.h"
 #include "motors.h"
 #include "wifi_esp32.h"
+#include "system.h"
 #ifdef CONFIG_DRONE_CAMERA
 #include "camera_stream.h"
 #endif
@@ -110,7 +111,7 @@ static int urlDecode(char *s)
 
 static esp_err_t status_handler(httpd_req_t *req)
 {
-    char json[512];
+    char json[600];
     float lp, lr;
     levelCalibGet(&lp, &lr);
     float h = flightSafetyGetHeight();
@@ -129,11 +130,12 @@ static esp_err_t status_handler(httpd_req_t *req)
              "\"state\":%d,\"height\":%.2f,\"tof\":%s,"
              "\"level_pitch\":%.2f,\"level_roll\":%.2f,"
              "\"ssid\":\"%s\",\"channel\":%u,\"fw\":\"%s\",\"ota\":true,\"stream_port\":81,"
-             "\"board\":\"XIAO_ESP32S3\"}",
+             "\"imu\":%s,\"selftest\":%s,\"board\":\"XIAO_ESP32S3\"}",
              cam ? "true" : "false", sensor, frame,
              pmGetBatteryVoltage(), (unsigned)pmGetBatteryPercent(),
              (int)flightSafetyGetState(), h, h >= 0 ? "true" : "false",
-             lp, lr, wifiGetSsid(), (unsigned)wifiGetChannel(), DRONE_FW_VERSION);
+             lp, lr, wifiGetSsid(), (unsigned)wifiGetChannel(), DRONE_FW_VERSION,
+             sensorsImuPresent() ? "true" : "false", systemIsSelftestPassed() ? "true" : "false");
     return send_json(req, "200 OK", json);
 }
 

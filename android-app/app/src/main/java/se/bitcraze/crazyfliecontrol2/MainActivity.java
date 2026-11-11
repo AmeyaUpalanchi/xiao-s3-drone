@@ -467,10 +467,12 @@ public class MainActivity extends EspActivity {
                     finishConnect();
                     return;
                 }
-                showToastie(getString(R.string.toast_finding_wifi));
+                // Android shows its own "Connect to device?" sheet with a spinner while it scans.
+                mToggleConnectButton.setText(R.string.button_searching);
                 DroneNetwork.joinDroneWifi(this, new DroneNetwork.JoinListener() {
                     @Override
                     public void onJoined() {
+                        mToggleConnectButton.setText(R.string.button_connecting);
                         finishConnect();
                     }
 
@@ -478,11 +480,26 @@ public class MainActivity extends EspActivity {
                     public void onFailed() {
                         mConnecting = false;
                         setConnectionButtonDisconnected();
-                        showToastie(getString(R.string.toast_wifi_failed));
+                        showNoDroneFound();
                     }
                 });
             });
         });
+    }
+
+    /** Shown when the Wi-Fi search times out or is cancelled. */
+    private void showNoDroneFound() {
+        if (isFinishing()) {
+            return;
+        }
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.nodrone_title)
+                .setMessage(R.string.nodrone_message)
+                .setPositiveButton(R.string.nodrone_retry, (d, w) -> connectToDrone())
+                .setNeutralButton(R.string.nodrone_wifi_settings, (d, w) ->
+                        startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS)))
+                .setNegativeButton(R.string.nodrone_close, null)
+                .show();
     }
 
     private void finishConnect() {

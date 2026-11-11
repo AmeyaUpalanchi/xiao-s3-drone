@@ -22,4 +22,7 @@ void levelCalibReset(void);
 /** Current calibration angles in degrees. */
 void levelCalibGet(float *pitchDeg, float *rollDeg);
 
+/** false if the MPU-6050 did not answer at boot (drone stays grounded). */
+bool sensorsImuPresent(void);
+
 #endif /* LEVEL_CALIB_H_ */

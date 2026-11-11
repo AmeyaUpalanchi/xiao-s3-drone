@@ -215,6 +215,7 @@ static void sensorsAccAlignToGravity(Axis3f *in, Axis3f *out);
 /* ---- Level calibration state (The Drone Community) ---- */
 static volatile int levelCalibRemaining = 0;
 static int levelCalibCount = 0;
+static bool imuPresent = true;   /* false when the MPU-6050 doesn't answer on I2C */
 static Axis3f levelCalibSum;
 static float levelCalibSumSq = 0;
 static float levelPitchDeg = 0;
@@ -446,9 +447,11 @@ static void sensorsDeviceInit(void)
     if (mpu6050TestConnection() == true) {
         DEBUG_PRINTI("MPU6050 I2C connection [OK].\n");
     } else {
-        DEBUG_PRINTE("MPU6050 I2C connection [FAIL].\n");
-        // Please check your hardware !
-        assert(0);
+        // Don't reboot-loop: keep Wi-Fi and the app link up so the app can say
+        // what's wrong. The self-test fails, so the drone never starts flying.
+        DEBUG_PRINTE("MPU6050 I2C connection [FAIL]. Check the IMU module on its header.\n");
+        imuPresent = false;
+        return;
     }
 
     mpu6050Reset();
@@ -841,9 +844,17 @@ void sensorsMpu6050Hmc5883lMs5611Init(void)
 
     sensorsBiasObjInit(&gyroBiasRunning);
     sensorsDeviceInit();
+    if (!imuPresent) {
+        return;     // isInit stays false -> sensorsTest() fails -> no flight
+    }
     sensorsInterruptInit();
     sensorsTaskInit();
     isInit = true;
+}
+
+bool sensorsImuPresent(void)
+{
+    return imuPresent;
 }
 
 bool sensorsMpu6050Hmc5883lMs5611Test(void)
@@ -851,6 +862,9 @@ bool sensorsMpu6050Hmc5883lMs5611Test(void)
 
     bool testStatus = true;
 
+    if (!imuPresent) {
+        return false;
+    }
     if (!isInit) {
         DEBUG_PRINTE("Error while initializing sensor task\r\n");
         testStatus = false;

@@ -147,6 +147,7 @@ public class MainPresenter {
         @Override
         public void connectionFailed(final String msg) {
             mainActivity.showToastie(msg);
+            mainActivity.setConnectionButtonDisconnected();
             disconnect();
         }
 
