@@ -33,6 +33,9 @@ public interface IController {
 
     public float getThrustAbsolute();
 
+    /** Raw throttle stick position -1..1 (centre 0) after the deadzone. */
+    public float getThrustAxis();
+
     public float getRoll();
 
     public float getPitch();

@@ -17,10 +17,6 @@
 
 static const char *TAG = "CAMERA";
 
-/* Provided by the power-management module (pm_esplane.c). */
-extern float pmGetBatteryVoltage(void);
-extern unsigned char pmGetBatteryPercent(void);
-
 /* Seeed Studio XIAO ESP32-S3 Sense camera connector (B2B), from the Seeed wiki.
  * None of these pins are used by the drone PCB (motors GPIO1/3/4/44,
  * I2C GPIO5/6, VBAT GPIO2, LED GPIO21). */
@@ -144,21 +140,6 @@ static void add_common_headers(httpd_req_t *req)
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
 }
 
-static esp_err_t status_handler(httpd_req_t *req)
-{
-    char json[256];
-    snprintf(json, sizeof(json),
-             "{\"camera\":%s,\"sensor\":\"%s\",\"frame\":\"%s\",\"quality\":%d,"
-             "\"battery_v\":%.2f,\"battery_pct\":%u,\"stream_clients\":%d,"
-             "\"stream_port\":81,\"board\":\"XIAO_ESP32S3\"}",
-             cameraPresent ? "true" : "false", sensorName, CAM_FRAME_NAME,
-             CONFIG_DRONE_CAM_JPEG_QUALITY, pmGetBatteryVoltage(),
-             (unsigned)pmGetBatteryPercent(), streamClients);
-    add_common_headers(req);
-    httpd_resp_set_type(req, "application/json");
-    return httpd_resp_sendstr(req, json);
-}
-
 static esp_err_t capture_handler(httpd_req_t *req)
 {
     if (!cameraPresent) {
@@ -231,30 +212,17 @@ static esp_err_t stream_handler(httpd_req_t *req)
     return res;
 }
 
-static void start_servers(void)
+static void start_stream_server(void)
 {
+    /* The stream blocks its socket for as long as the client watches,
+     * so it gets its own small server on :81. */
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.task_priority = CAM_HTTP_TASK_PRIO;
     config.stack_size = 4096;
-    config.max_open_sockets = 3;
+    config.max_open_sockets = 2;
     config.lru_purge_enable = true;
-    config.server_port = 80;
-    config.ctrl_port = 32768;
-
-    httpd_handle_t ctrl = NULL;
-    if (httpd_start(&ctrl, &config) == ESP_OK) {
-        httpd_uri_t status_uri = { .uri = "/status", .method = HTTP_GET, .handler = status_handler };
-        httpd_uri_t capture_uri = { .uri = "/capture", .method = HTTP_GET, .handler = capture_handler };
-        httpd_register_uri_handler(ctrl, &status_uri);
-        httpd_register_uri_handler(ctrl, &capture_uri);
-    } else {
-        ESP_LOGE(TAG, "failed to start control server on :80");
-    }
-
-    /* The stream blocks its socket forever, so it gets its own server. */
     config.server_port = 81;
     config.ctrl_port = 32769;
-    config.max_open_sockets = 2;
     httpd_handle_t stream = NULL;
     if (httpd_start(&stream, &config) == ESP_OK) {
         httpd_uri_t stream_uri = { .uri = "/stream", .method = HTTP_GET, .handler = stream_handler };
@@ -262,6 +230,22 @@ static void start_servers(void)
     } else {
         ESP_LOGE(TAG, "failed to start stream server on :81");
     }
+}
+
+void cameraStreamRegisterHandlers(httpd_handle_t server)
+{
+    httpd_uri_t capture_uri = { .uri = "/capture", .method = HTTP_GET, .handler = capture_handler };
+    httpd_register_uri_handler(server, &capture_uri);
+}
+
+const char *cameraStreamSensorName(void)
+{
+    return sensorName;
+}
+
+const char *cameraStreamFrameName(void)
+{
+    return CAM_FRAME_NAME;
 }
 
 static void camera_init_task(void *arg)
@@ -279,7 +263,9 @@ static void camera_init_task(void *arg)
         ESP_LOGW(TAG, "no camera detected (0x%x) - flying without video", err);
     }
 
-    start_servers();
+    if (cameraPresent) {
+        start_stream_server();
+    }
     vTaskDelete(NULL);
 }
 

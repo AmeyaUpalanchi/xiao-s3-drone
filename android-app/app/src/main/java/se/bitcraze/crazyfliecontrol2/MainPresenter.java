@@ -66,6 +66,13 @@ public class MainPresenter {
     private volatile float mLandStartThrust = 0f;
     private volatile long mLandStartMs = 0;
 
+    // ---- Height sensor (VL53L1X on a Qwiic port) ----
+    private static final long TAKEOFF_MS = 1500;
+    private static final float TAKEOFF_CLIMB = 0.5f;     // stick equivalent, ~0.5 m/s
+    private volatile boolean mHeightMode = false;        // firmware flies altitude hold
+    private volatile float mHeight = -1f;                // metres, -1 when unknown
+    private volatile long mTakeoffUntilMs = 0;
+
     public MainPresenter(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
     }
@@ -113,6 +120,7 @@ public class MainPresenter {
                     checkForNoOfRingEffects();
                     checkForZRanger();
                     mFirmwareSafety = paramToc.getElementByCompleteName("safety.armed") != null;
+                    checkForHeightSensor();
                     Log.d(LOG_TAG, "firmware safety module: " + mFirmwareSafety);
                 }
             }
@@ -189,6 +197,25 @@ public class MainPresenter {
         mCrazyflie.getParam().requestParamUpdate("deck.bcZRanger");
     }
 
+    private void checkForHeightSensor() {
+        if (mParamToc == null || mParamToc.getElementByCompleteName("deck.bcZRanger2") == null) {
+            return;
+        }
+        mCrazyflie.getParam().addParamListener(new ParamListener("deck", "bcZRanger2") {
+            @Override
+            public void updated(String name, Number value) {
+                boolean present = mCrazyflie != null
+                        && mCrazyflie.getParam().getValue("deck.bcZRanger2").intValue() == 1;
+                mHeightMode = present && mFirmwareSafety;
+                if (mainActivity != null) {
+                    mainActivity.onHeightModeChanged(mHeightMode);
+                }
+                Log.d(LOG_TAG, "height sensor: " + present);
+            }
+        });
+        mCrazyflie.getParam().requestParamUpdate("deck.bcZRanger2");
+    }
+
     private void checkForNoOfRingEffects() {
         //set number of LED ring effects
         mCrazyflie.getParam().addParamListener(new ParamListener("ring", "neffect") {
@@ -228,7 +255,9 @@ public class MainPresenter {
                     float roll = controller.getRoll();
                     float pitch = controller.getPitch();
                     float yaw = controller.getYaw();
-                    float thrustAbsolute = gateThrust(controller.getThrustAbsolute());
+                    float thrustAbsolute = gateThrust(mHeightMode
+                            ? heightModeThrust(controller.getThrustAxis())
+                            : controller.getThrustAbsolute());
                     if (mFlightState == STATE_LANDING || mFlightState == STATE_FAILSAFE) {
                         roll = 0;
                         pitch = 0;
@@ -329,6 +358,11 @@ public class MainPresenter {
         }
 
         setFlightState(STATE_DISARMED);
+        mHeightMode = false;
+        mHeight = -1f;
+        if (mainActivity != null) {
+            mainActivity.onHeightModeChanged(false);
+        }
         // link quality is not available when there is no active connection
         if (mainActivity != null) {
             mainActivity.setLinkQualityText("N/A");
@@ -397,6 +431,44 @@ public class MainPresenter {
     /** Thrust actually sent last (0 when disarmed). */
     public float getLastSentThrust() {
         return mLastSentThrust;
+    }
+
+    public boolean isHeightMode() {
+        return mHeightMode;
+    }
+
+    public float getHeight() {
+        return mHeight;
+    }
+
+    /** Airborne: measured height when there is a sensor, otherwise thrust above zero. */
+    public boolean isFlying() {
+        if (mFlightState == STATE_DISARMED) {
+            return false;
+        }
+        if (mHeightMode && mHeight >= 0) {
+            return mHeight > 0.10f;
+        }
+        return mLastSentThrust > 0;
+    }
+
+    /** Height sensor only: climb to about half a metre and hold. */
+    public void takeOff() {
+        if (mHeightMode && mFlightState == STATE_ARMED && !isFlying()) {
+            mTakeoffUntilMs = System.currentTimeMillis() + TAKEOFF_MS;
+        }
+    }
+
+    /**
+     * Altitude hold (firmware crtp_commander_rpyt): 32767 = hold height,
+     * above = climb, below = descend, up to 1 m/s at full stick.
+     */
+    private float heightModeThrust(float axis) {
+        if (System.currentTimeMillis() < mTakeoffUntilMs) {
+            axis = Math.max(axis, TAKEOFF_CLIMB);
+        }
+        axis = Math.max(-1f, Math.min(1f, axis));
+        return 32767f + axis * 32767f;
     }
 
     private void setFlightState(int state) {
@@ -500,6 +572,11 @@ public class MainPresenter {
                 // Firmware >= xiao port reports a real 0..100 % in pm.batteryLevel
                 int percent = level != null ? level.intValue() : MainActivity.percentFromVoltage(voltage);
                 mainActivity.setBattery(percent, voltage);
+                Number height = data.get("safety.height");
+                if (height != null) {
+                    mHeight = height.floatValue();
+                    mainActivity.setHeight(mHeight);
+                }
                 Number safety = data.get("safety.state");
                 if (safety != null && mFirmwareSafety) {
                     setFlightState(safety.intValue());
@@ -520,6 +597,9 @@ public class MainPresenter {
         }
         if (mLogToc != null && mLogToc.getElementByCompleteName("safety.state") != null) {
             logConfigStandard.addVariable("safety.state", VariableType.UINT8_T);
+        }
+        if (mLogToc != null && mLogToc.getElementByCompleteName("safety.height") != null) {
+            logConfigStandard.addVariable("safety.height", VariableType.FLOAT);
         }
         return logConfigStandard;
     }

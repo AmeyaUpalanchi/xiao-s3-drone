@@ -1,5 +1,6 @@
 /*
- * flight_safety.h - arm / disarm, auto-land, motor kill and failsafe landing
+ * flight_safety.h - arm / disarm, auto-land, motor kill, failsafe landing
+ *                   and the disarmed-only "service" mode (motor test, beeper)
  *
  * Copyright (C) 2026 The Drone Community
  * Licensed under the GNU General Public License v3 (same as ESP-Drone).
@@ -15,17 +16,25 @@ typedef enum {
   SAFETY_ARMED = 1,        // pilot has control
   SAFETY_LANDING = 2,      // auto-land requested from the app
   SAFETY_FAILSAFE = 3,     // auto-land because the link was lost or the battery is critical
+  SAFETY_SERVICE = 4,      // disarmed, motors driven by a service routine (test / beep)
 } safetyState_t;
 
-/**
- * Call once per stabilizer tick (1 kHz) right after commanderGetSetpoint().
- * Overrides the setpoint while landing and zeroes thrust while disarmed.
- */
+/** Call once per stabilizer tick (1 kHz) right after commanderGetSetpoint(). */
 void flightSafetyUpdate(setpoint_t *setpoint);
 
 /** false while disarmed: the stabilizer must keep the motors stopped. */
 bool flightSafetyMotorsAllowed(void);
 
+/** true while a service routine owns the motors (stabilizer must not touch them). */
+bool flightSafetyServiceActive(void);
+
+/** Enter / leave service mode. Begin fails unless the drone is disarmed. */
+bool flightSafetyBeginService(void);
+void flightSafetyEndService(void);
+
 safetyState_t flightSafetyGetState(void);
+
+/** Height above ground from the VL53L1X in metres, or -1 when no sensor. */
+float flightSafetyGetHeight(void);
 
 #endif /* FLIGHT_SAFETY_H_ */

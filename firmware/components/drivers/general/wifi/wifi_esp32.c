@@ -18,6 +18,7 @@
 #include "stm32_legacy.h"
 #define DEBUG_MODULE  "WIFI_UDP"
 #include "debug_cf.h"
+#include "nvs.h"
 
 #define UDP_SERVER_PORT         2390
 #define UDP_SERVER_BUFSIZE      128
@@ -202,6 +203,11 @@ static void udp_server_tx_task(void *pvParameters)
 }
 
 
+const char *wifiGetSsid(void)
+{
+    return WIFI_SSID;
+}
+
 void wifiInit(void)
 {
     if (isInit) {
@@ -225,6 +231,22 @@ void wifiInit(void)
 
     ESP_ERROR_CHECK(esp_wifi_get_mac(ESP_IF_WIFI_AP, mac));
     sprintf(WIFI_SSID, "ESP-DRONE_%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+    /* Name and password chosen in the app (Drone settings > Wi-Fi) */
+    nvs_handle_t nvs;
+    if (nvs_open("tdc", NVS_READONLY, &nvs) == ESP_OK) {
+        char name[21];
+        char pass[64];
+        size_t len = sizeof(name);
+        if (nvs_get_str(nvs, "wifi_name", name, &len) == ESP_OK && len > 1) {
+            snprintf(WIFI_SSID, sizeof(WIFI_SSID), "ESP-DRONE_%s", name);
+        }
+        len = sizeof(pass);
+        if (nvs_get_str(nvs, "wifi_pass", pass, &len) == ESP_OK && len >= 9) {
+            snprintf(WIFI_PWD, sizeof(WIFI_PWD), "%s", pass);
+        }
+        nvs_close(nvs);
+    }
 
     wifi_config_t wifi_config = {
         .ap = {

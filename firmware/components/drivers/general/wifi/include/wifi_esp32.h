@@ -19,6 +19,9 @@ typedef struct
  */
 void wifiInit(void);
 
+/** SSID the drone is broadcasting (ESP-DRONE_<name or MAC>). */
+const char *wifiGetSsid(void);
+
 /**
  * Test the WIFI status.
  *

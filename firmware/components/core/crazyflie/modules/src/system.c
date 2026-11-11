@@ -63,6 +63,7 @@
 #ifdef CONFIG_DRONE_CAMERA
 #include "camera_stream.h"
 #endif
+#include "drone_api.h"
 #include "sound.h"
 #include "sysload.h"
 #include "estimator_kalman.h"
@@ -209,6 +210,8 @@ void systemTask(void *arg)
   // XIAO ESP32-S3 Sense: live video + photo over Wi-Fi (no-op if no camera)
   cameraStreamInit();
 #endif
+  // Status, motor test, beeper, level calibration, Wi-Fi name, firmware update
+  droneApiInit();
 
 #ifdef PROXIMITY_ENABLED
   proximityInit();

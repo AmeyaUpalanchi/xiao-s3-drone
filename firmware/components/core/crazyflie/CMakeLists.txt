@@ -48,6 +48,7 @@ idf_component_register(SRCS "./hal/src/buzzer.c"
                 "./modules/src/sound_cf2.c"
                 "./modules/src/stabilizer.c"
                 "./modules/src/flight_safety.c"
+                "./modules/src/drone_api.c"
                 "./modules/src/sysload.c"
                 "./modules/src/system.c"
                 "./modules/src/trigger.c"
@@ -69,7 +70,7 @@ idf_component_register(SRCS "./hal/src/buzzer.c"
                 "./utils/src/version.c"
                 "./utils/src/rateSupervisor.c"
                 INCLUDE_DIRS "./hal/interface" "./modules/interface" "./utils/interface"
-                REQUIRES i2c_bus deck mpu6050 ms5611 hmc5883l pmw3901 vl53l1 vl53l0 platform config led eeprom dsp_lib motors wifi adc esp_timer camera_stream)
+                REQUIRES i2c_bus deck mpu6050 ms5611 hmc5883l pmw3901 vl53l1 vl53l0 platform config led eeprom dsp_lib motors wifi adc esp_timer camera_stream esp_http_server app_update nvs_flash)
 
 idf_component_get_property( FREERTOS_ORIG_INCLUDE_PATH freertos ORIG_INCLUDE_PATH)
 target_include_directories(${COMPONENT_TARGET} PUBLIC

@@ -166,6 +166,8 @@ public class MainActivity extends EspActivity {
     private long mFlightSampleStartMs;
     private int mFlightSampleStartPct = -1;
     private boolean mConnecting = false;
+    private TextView mBatteryWarning;
+    private int mBatteryWarnLevel = 0;   // 0 none, 1 low (25%), 2 critical (15%)
 
     private MaterialButton mPhotoButton;
     private MaterialButton mRecordButton;
@@ -196,6 +198,10 @@ public class MainActivity extends EspActivity {
         setDefaultPreferenceValues();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        android.content.SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        if (!sp.contains(DroneToolsActivity.PREF_FLYING_STYLE)) {
+            DroneToolsActivity.applyFlyingStyle(sp, DroneToolsActivity.STYLE_NORMAL);
+        }
         setupEdgeToEdge();
 
         mTextView_battery = (TextView) findViewById(R.id.battery_text);
@@ -275,6 +281,7 @@ public class MainActivity extends EspActivity {
         mStopButton = findViewById(R.id.button_stop);
         mFlightTime = findViewById(R.id.flight_time);
         mFlightStatus = findViewById(R.id.flight_status);
+        mBatteryWarning = findViewById(R.id.battery_warning);
 
         mArmButton.setOnClickListener(v -> {
             if (!mPresenter.isConnected()) {
@@ -288,7 +295,7 @@ public class MainActivity extends EspActivity {
                 mPresenter.arm();
                 showToastie(getString(R.string.toast_armed));
             } else {
-                if (mPresenter.getLastSentThrust() > 0) {
+                if (mPresenter.isFlying()) {
                     showToastie(getString(R.string.toast_land_first));
                     return;
                 }
@@ -299,6 +306,8 @@ public class MainActivity extends EspActivity {
         mLandButton.setOnClickListener(v -> {
             if (mPresenter.getFlightState() == MainPresenter.STATE_LANDING) {
                 mPresenter.cancelLanding();
+            } else if (canTakeOff()) {
+                mPresenter.takeOff();
             } else {
                 mPresenter.autoLand();
             }
@@ -338,7 +347,20 @@ public class MainActivity extends EspActivity {
 
         mLandButton.setEnabled(armed && state != MainPresenter.STATE_FAILSAFE);
         mLandButton.setAlpha(mLandButton.isEnabled() ? 1f : 0.4f);
-        mLandButton.setText(state == MainPresenter.STATE_LANDING ? R.string.button_cancel_land : R.string.button_land);
+        if (state == MainPresenter.STATE_LANDING) {
+            mLandButton.setText(R.string.button_cancel_land);
+            mLandButton.setIconResource(R.drawable.ic_land);
+        } else if (canTakeOff()) {
+            mLandButton.setText(R.string.button_takeoff);
+            mLandButton.setIconResource(R.drawable.ic_takeoff);
+        } else {
+            mLandButton.setText(R.string.button_land);
+            mLandButton.setIconResource(R.drawable.ic_land);
+        }
+        if (!armed) {
+            mBatteryWarnLevel = 0;
+            mBatteryWarning.setVisibility(View.GONE);
+        }
 
         mStopButton.setEnabled(armed);
         mStopButton.setAlpha(armed ? 1f : 0.4f);
@@ -362,8 +384,8 @@ public class MainActivity extends EspActivity {
         }
         float usable = Math.max(0, percent - BATTERY_RESERVE_PCT);
         float minutes = usable / (100f - BATTERY_RESERVE_PCT) * NOMINAL_FLIGHT_MIN;
-        boolean flying = mPresenter != null && mPresenter.getFlightState() != MainPresenter.STATE_DISARMED
-                && mPresenter.getLastSentThrust() > 0;
+        boolean flying = mPresenter != null && mPresenter.isFlying();
+        checkBatteryWarning(percent);
         long now = System.currentTimeMillis();
         if (flying) {
             if (mFlightSampleStartPct < 0) {
@@ -381,6 +403,54 @@ public class MainActivity extends EspActivity {
         mFlightTime.setText(minutes < 1f ? getString(R.string.flight_time_short)
                 : getString(R.string.flight_time_fmt, Math.round(minutes)));
         mFlightTime.setVisibility(View.VISIBLE);
+    }
+
+    private boolean canTakeOff() {
+        return mPresenter != null && mPresenter.isHeightMode()
+                && mPresenter.getFlightState() == MainPresenter.STATE_ARMED && !mPresenter.isFlying();
+    }
+
+    /** Called by the presenter when a VL53L1X height sensor is (not) found. */
+    public void onHeightModeChanged(boolean heightMode) {
+        runOnUiThread(() -> {
+            mFlightDataView.setHeightMode(heightMode);
+            if (heightMode) {
+                showToastie(getString(R.string.toast_height_sensor));
+            }
+            updateFlightUi();
+        });
+    }
+
+    public void setHeight(float metres) {
+        runOnUiThread(() -> {
+            mFlightDataView.setHeight(metres);
+            updateFlightUi();
+        });
+    }
+
+    /** Warn once at 25 % and again at 15 % while armed. */
+    private void checkBatteryWarning(int percent) {
+        boolean armed = mPresenter != null && mPresenter.getFlightState() != MainPresenter.STATE_DISARMED;
+        if (!armed || percent < 0) {
+            return;
+        }
+        int level = percent <= 15 ? 2 : percent <= 25 ? 1 : 0;
+        if (level > mBatteryWarnLevel) {
+            mBatteryWarnLevel = level;
+            mBatteryWarning.setText(level == 2 ? R.string.battery_critical : R.string.battery_low);
+            mBatteryWarning.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this,
+                    level == 2 ? R.color.status_danger : R.color.status_warn)));
+            mBatteryWarning.setTextColor(level == 2 ? Color.WHITE : Color.BLACK);
+            mBatteryWarning.setVisibility(View.VISIBLE);
+            vibrate(level == 2 ? new long[]{0, 250, 120, 250, 120, 400} : new long[]{0, 300});
+        }
+    }
+
+    private void vibrate(long[] pattern) {
+        android.os.Vibrator v = getSystemService(android.os.Vibrator.class);
+        if (v != null && v.hasVibrator()) {
+            v.vibrate(android.os.VibrationEffect.createWaveform(pattern, -1));
+        }
     }
 
     /** Connect button: join the drone Wi-Fi if needed, then open the CRTP link. */
@@ -813,7 +883,7 @@ public class MainActivity extends EspActivity {
 
             @Override
             public void onClick(View v) {
-              Intent intent = new Intent(MainActivity.this, PreferencesActivity.class);
+              Intent intent = new Intent(MainActivity.this, DroneToolsActivity.class);
               startActivity(intent);
             }
         });

@@ -27,9 +27,76 @@
     <string name="help_steps_title">Before you take off</string>
     <string name="help_steps">1.  Put the drone on flat ground and switch it on. Don\'t touch it for 3 seconds while the sensors settle.\n2.  Tap Connect. The phone joins the drone\'s Wi-Fi on its own (allow it the first time). Battery and signal show up at the top.\n3.  Let go of the left stick and tap Arm. The button turns amber: the drone is live.\n4.  Ease the left stick up until it lifts off, then steer with the right stick.\n5.  To land, lower the left stick slowly or tap Land. Land at 20% battery or when the timer shows under a minute.\n6.  Tap Disarm once it\'s on the ground.</string>
     <string name="help_buttons_title">Buttons</string>
-    <string name="help_buttons">Arm / Disarm (top): the motors can only spin while armed. Let go of the left stick before arming.\nLand: the drone levels itself, sinks to the ground and disarms. Tap Cancel to take back control.\nHold to stop: press and hold for half a second to cut the motors at once. Emergencies only, the drone will drop.\nTimer (next to battery): roughly how many minutes of flying are left.\nLock (on the left stick): stops the left stick moving sideways, so you can\'t turn by accident.\nLive, Photo, Record: camera feed, photos and video. These need a XIAO ESP32-S3 Sense running this firmware.\nIf the Wi-Fi signal drops for half a second, the drone lands by itself.</string>
+    <string name="help_buttons">Arm / Disarm (top): the motors can only spin while armed. Let go of the left stick before arming.\nLand: the drone levels itself, sinks to the ground and disarms. Tap Cancel to take back control.\nHold to stop: press and hold for half a second to cut the motors at once. Emergencies only, the drone will drop.\nTimer (next to battery): roughly how many minutes of flying are left.\nLock (on the left stick): stops the left stick moving sideways, so you can\'t turn by accident.\nLive, Photo, Record: camera feed, photos and video. These need a XIAO ESP32-S3 Sense running this firmware.\nIf the Wi-Fi signal drops for half a second, the drone lands by itself.\nWarnings: the phone buzzes and a banner shows at 25% and 15% battery.\nGear: flying style (Beginner, Normal, Sport), motor test, level calibration, find my drone, Wi-Fi password and firmware updates.\nHeight sensor (VL53L1X on a Qwiic port): the drone holds its height by itself, the stick centre means hover, and Land becomes Take off while on the ground.</string>
     <string name="help_mode_note">These are Mode 2 controls (the default). You can swap sticks in Settings, Flight control, Mode.</string>
     <string name="help_done">Got it</string>
+
+    <!-- Drone settings screen -->
+    <string name="tools_title">Drone settings</string>
+    <string name="tools_back">Back</string>
+    <string name="tools_checking">Checking drone…</string>
+    <string name="tools_offline">Drone not connected</string>
+    <string name="tools_online">%1$s · firmware %2$s</string>
+    <string name="tools_busy">Working…</string>
+    <string name="tools_done">Done</string>
+
+    <string name="style_title">Flying style</string>
+    <string name="style_beginner">Beginner</string>
+    <string name="style_normal">Normal</string>
+    <string name="style_sport">Sport</string>
+    <string name="style_desc_beginner" formatted="false">Gentle: tilts up to 10°, slow turns, 70% max power. Best for first flights and indoors.</string>
+    <string name="style_desc_normal" formatted="false">Balanced: tilts up to 18°, 90°/s turns, 85% max power.</string>
+    <string name="style_desc_sport" formatted="false">Quick: tilts up to 28°, fast turns, 95% max power. Outdoors only.</string>
+
+    <string name="motor_title">Motor test</string>
+    <string name="motor_warning">Take the propellers off, or hold the drone firmly. Each motor spins for under a second.</string>
+    <string name="motor_front">▲ Front of the drone</string>
+    <string name="motor_1">M1 · front right</string>
+    <string name="motor_2">M2 · back right</string>
+    <string name="motor_3">M3 · back left</string>
+    <string name="motor_4">M4 · front left</string>
+    <string name="motor_all">Test all four in turn</string>
+    <string name="motor_hint">If a different motor spins than the one you tapped, its pin is swapped in the firmware settings (MOTOR0x_PIN). If none spins, check the motor plug.</string>
+
+    <string name="level_title">Level calibration</string>
+    <string name="level_desc">Fixes a drone that slowly drifts one way. Put it on a flat table, don\'t touch it, then tap Calibrate.</string>
+    <string name="level_run">Calibrate</string>
+    <string name="level_reset">Reset</string>
+    <string name="level_ok">Saved. The sensor was tilted %1$.1f° forward and %2$.1f° sideways.</string>
+    <string name="level_cleared">Calibration cleared.</string>
+
+    <string name="find_title">Find my drone</string>
+    <string name="find_desc">Lost it in the grass? The motors play a short beep three times.</string>
+    <string name="find_beep">Beep</string>
+
+    <string name="wifi_title">Wi-Fi name and password</string>
+    <string name="wifi_current_fmt">Now broadcasting: %1$s</string>
+    <string name="wifi_name_hint">Drone name</string>
+    <string name="wifi_pass_hint">New password (8+ characters)</string>
+    <string name="wifi_save">Save and restart drone</string>
+    <string name="wifi_note">Give each drone its own password so others can\'t connect to it. Anyone else flying it enters the same password here before tapping Connect.</string>
+    <string name="wifi_saved">Saved. The drone is restarting; tap Connect again in about 10 seconds.</string>
+    <string name="wifi_saved_local">Password saved on this phone. It will be used next time you tap Connect.</string>
+    <string name="wifi_err_pass">Use 8 to 63 characters</string>
+
+    <string name="fw_title">Firmware update</string>
+    <string name="fw_current_fmt">Installed: %1$s</string>
+    <string name="fw_choose">Choose firmware file…</string>
+    <string name="fw_note">Pick ESPDrone.bin from your computer or phone. The drone must be disarmed and charged.</string>
+    <string name="fw_uploading">Sending %1$d%%…</string>
+    <string name="fw_done">Updated. The drone is restarting with the new firmware.</string>
+
+    <string name="controls_title">Sticks and limits</string>
+    <string name="controls_desc">Stick mode, trim, dead zone and gamepad mapping.</string>
+    <string name="controls_open">Open stick settings</string>
+
+    <!-- Battery warnings and height -->
+    <string name="battery_low">Battery low · land soon</string>
+    <string name="battery_critical">Battery critical · land now</string>
+    <string name="button_takeoff">Take off</string>
+    <string name="height_label">Height</string>
+    <string name="height_fmt">%1$.2f m</string>
+    <string name="toast_height_sensor">Height sensor found: the drone holds its height, and Take off is available.</string>
 
     <!-- Flight -->
     <string name="button_arm">Arm</string>

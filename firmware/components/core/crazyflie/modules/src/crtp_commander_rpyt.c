@@ -95,7 +95,12 @@ void setCommandermode(FlightMode mode){
     altHoldMode = true;
     posHoldMode = false;
     posSetMode = false;
+#ifdef CONFIG_XIAO_ESP32S3_BOARD
+    // No barometer on PCB1: height comes from the VL53L1X through the Kalman filter
+    registerRequiredEstimator(kalmanEstimator);
+#else
     registerRequiredEstimator(complementaryEstimator);
+#endif
     break;
   case POSHOLD_MODE:
     altHoldMode = true;

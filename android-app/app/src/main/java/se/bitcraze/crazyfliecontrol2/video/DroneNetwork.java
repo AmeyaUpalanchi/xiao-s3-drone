@@ -29,6 +29,14 @@ public final class DroneNetwork {
     /** Soft-AP name prefix and password set in the firmware (wifi_esp32.c). */
     public static final String DRONE_SSID_PREFIX = "ESP-DRONE_";
     public static final String DRONE_PASSWORD = "12345678";
+    /** SharedPreferences key holding a custom drone Wi-Fi password (Drone settings). */
+    public static final String PREF_DRONE_PASSWORD = "pref_drone_wifi_password";
+
+    public static String getPassword(Context context) {
+        String p = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                .getString(PREF_DRONE_PASSWORD, "");
+        return (p != null && p.length() >= 8) ? p : DRONE_PASSWORD;
+    }
 
     public interface JoinListener {
         void onJoined();
@@ -108,7 +116,7 @@ public final class DroneNetwork {
         releaseJoin(cm);
         android.net.wifi.WifiNetworkSpecifier spec = new android.net.wifi.WifiNetworkSpecifier.Builder()
                 .setSsidPattern(new android.os.PatternMatcher(DRONE_SSID_PREFIX, android.os.PatternMatcher.PATTERN_PREFIX))
-                .setWpa2Passphrase(DRONE_PASSWORD)
+                .setWpa2Passphrase(getPassword(context))
                 .build();
         NetworkRequest request = new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)

@@ -93,6 +93,11 @@ public abstract class AbstractController implements IController {
         return 0;
     }
 
+    public float getThrustAxis() {
+        float t = ((mControls.getMode() == 1 || mControls.getMode() == 3) ? mControls.getRightAnalog_Y() : mControls.getLeftAnalog_Y());
+        return t * mControls.getDeadzone(t);
+    }
+
     public float getRoll() {
         float roll = (mControls.getMode() == 1 || mControls.getMode() == 2) ? mControls.getRightAnalog_X() : mControls.getLeftAnalog_X();
         return ((roll * mControls.getDeadzone(roll)) + mControls.getRollTrim()) * mControls.getRollPitchFactor();

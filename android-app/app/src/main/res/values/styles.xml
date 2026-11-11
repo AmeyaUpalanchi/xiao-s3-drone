@@ -9,6 +9,8 @@
         <item name="colorSurface">@color/brand_surface</item>
         <item name="colorOnSurface">@color/brand_on_surface</item>
         <item name="colorOutline">@color/brand_outline</item>
+        <item name="colorSecondaryContainer">#1D3D72</item>
+        <item name="colorOnSecondaryContainer">#FFFFFF</item>
         <item name="android:colorBackground">@color/brand_background</item>
         <item name="android:windowBackground">@color/brand_background</item>
         <item name="android:statusBarColor">@color/transparent</item>
@@ -60,4 +62,24 @@
         <item name="iconTint">@color/brand_on_surface</item>
     </style>
 
+    <style name="Card">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
+    <style name="CardButton" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Drone.Label</item>
+        <item name="android:textSize">13sp</item>
+        <item name="cornerRadius">10dp</item>
+        <item name="backgroundTint">@color/brand_surface_high</item>
+        <item name="android:textColor">@color/brand_on_surface</item>
+    </style>
 </resources>

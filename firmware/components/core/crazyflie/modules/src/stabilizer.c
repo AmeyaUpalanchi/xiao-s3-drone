@@ -319,7 +319,9 @@ static void stabilizerTask(void* param)
       checkEmergencyStopTimeout();
 
       checkStops = systemIsArmed();
-      if (emergencyStop || (systemIsArmed() == false) || !flightSafetyMotorsAllowed()) {
+      if (flightSafetyServiceActive()) {
+        // motor test / beeper is driving the motors directly
+      } else if (emergencyStop || (systemIsArmed() == false) || !flightSafetyMotorsAllowed()) {
         powerStop();
       } else {
         powerDistribution(&control);

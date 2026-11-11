@@ -59,6 +59,32 @@ The drone also lands by itself if the Wi-Fi link is silent for 0.5 s or the batt
 stays below 3.2 V for 5 s. There is no altitude sensor on PCB1, so landing is a
 timed descent: start it from low height for the softest touchdown.
 
+### Drone tools (firmware 1.1.0-tdc)
+
+The app's gear button opens **Drone settings**. Each tool calls the drone's web API.
+Every tool that moves motors or changes settings only works while the drone is disarmed.
+
+| Tool | Endpoint | Notes |
+|---|---|---|
+| Motor test | `POST /api/motor?m=1..4` (0 = all) | 20 % for 0.7 s. M1 front-right, M2 back-right, M3 back-left, M4 front-left |
+| Find my drone | `POST /api/beep` | Beeps through the motors three times |
+| Level calibration | `POST /api/level`, `/api/level/reset` | Stored in flash (NVS), survives reboots |
+| Wi-Fi name / password | `GET`/`POST /api/wifi` | SSID becomes `ESP-DRONE_<name>`, drone restarts |
+| Firmware update | `POST /api/ota` | Upload `ESPDrone.bin`; only drone firmware is accepted |
+| Status | `GET /status` | Battery, state, height, camera, SSID, firmware version |
+
+Flying style (Beginner / Normal / Sport) and the low-battery warnings at 25 % and 15 %
+are handled in the app.
+
+**Height sensor.** Plug a VL53L1X board into either Qwiic connector (CN5/CN6). The
+firmware detects it at boot and switches to altitude hold using the Kalman estimator.
+The throttle stick centre then means "hold height". Land descends at 0.3 m/s and
+disarms on touchdown, and the app shows a Take off button that climbs to about 0.5 m.
+
+**Flash layout changed** to two app slots for wireless updates (`partitions.csv`).
+Flash once over USB with `idf.py flash` or `dist/firmware/flash.sh`. After that,
+updates can go over Wi-Fi from the app.
+
 ### Build and flash
 
 ```bash

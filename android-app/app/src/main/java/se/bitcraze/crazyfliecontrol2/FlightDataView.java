@@ -74,11 +74,34 @@ public class FlightDataView extends LinearLayout {
       this(context, null);
     }
 
+    private boolean mHeightMode = false;
+    private float mHeight = -1f;
+
     public void updateFlightData(float pitch, float roll, float thrust, float yaw) {
         mTextView_pitch.setText(format(R.string.pitch, round(pitch)));
         mTextView_roll.setText(format(R.string.roll, round(roll)));
-        mTextView_thrust.setText(format(R.string.thrust, round(thrust)));
+        if (mHeightMode) {
+            mTextView_thrust.setText(mHeight >= 0 ? format(R.string.height_fmt, mHeight) : "--");
+        } else {
+            mTextView_thrust.setText(format(R.string.thrust, round(thrust)));
+        }
         mTextView_yaw.setText(format(R.string.yaw, round(yaw)));
+    }
+
+    /** With a height sensor the first column shows height instead of thrust. */
+    public void setHeightMode(boolean heightMode) {
+        mHeightMode = heightMode;
+        ((TextView) findViewById(R.id.thrust_label)).setText(heightMode ? R.string.height_label : R.string.thrust_label);
+        if (!heightMode) {
+            mTextView_thrust.setText(format(R.string.thrust, 0.0));
+        }
+    }
+
+    public void setHeight(float metres) {
+        mHeight = metres;
+        if (mHeightMode) {
+            mTextView_thrust.setText(metres >= 0 ? format(R.string.height_fmt, metres) : "--");
+        }
     }
 
     private String format(int identifier, Object o){

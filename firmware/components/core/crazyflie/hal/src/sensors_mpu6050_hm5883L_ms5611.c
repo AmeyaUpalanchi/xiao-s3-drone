@@ -65,6 +65,8 @@
 #include "debug_cf.h"
 #include "static_mem.h"
 #include "crtp_commander.h"
+#include "level_calib.h"
+#include "nvs.h"
 
 /**
  * Enable 250Hz digital LPF mode. However does not work with
@@ -209,6 +211,16 @@ static void sensorsCalculateBiasMean(BiasObj *bias, Axis3i32 *meanOut);
 static void sensorsAddBiasValue(BiasObj *bias, int16_t x, int16_t y, int16_t z);
 static bool sensorsFindBiasValue(BiasObj *bias);
 static void sensorsAccAlignToGravity(Axis3f *in, Axis3f *out);
+
+/* ---- Level calibration state (The Drone Community) ---- */
+static volatile int levelCalibRemaining = 0;
+static int levelCalibCount = 0;
+static Axis3f levelCalibSum;
+static float levelCalibSumSq = 0;
+static float levelPitchDeg = 0;
+static float levelRollDeg = 0;
+static void levelCalibApply(float pitchDeg, float rollDeg);
+static void levelCalibLoad(void);
 
 STATIC_MEM_TASK_ALLOC(sensorsTask, SENSORS_TASK_STACKSIZE);
 bool sensorsMpu6050Hmc5883lMs5611ReadGyro(Axis3f *gyro)
@@ -404,6 +416,16 @@ void processAccGyroMeasurements(const uint8_t *buffer)
     accScaled.y = -(accelRaw.y) * SENSORS_G_PER_LSB_CFG / accScale;
     accScaled.z = (accelRaw.z) * SENSORS_G_PER_LSB_CFG / accScale;
 
+    /* Level calibration: collect unrotated samples while requested */
+    if (levelCalibRemaining > 0) {
+        levelCalibSum.x += accScaled.x;
+        levelCalibSum.y += accScaled.y;
+        levelCalibSum.z += accScaled.z;
+        levelCalibSumSq += accScaled.x * accScaled.x + accScaled.y * accScaled.y + accScaled.z * accScaled.z;
+        levelCalibCount++;
+        levelCalibRemaining--;
+    }
+
     /* sensors step 2.6 Compensate for a miss-aligned accelerometer. */
     sensorsAccAlignToGravity(&accScaled, &sensorData.acc);
     applyAxis3fLpf((lpf2pData *)(&accLpf), &sensorData.acc);
@@ -543,6 +565,15 @@ static void sensorsDeviceInit(void)
     }
 #endif
 
+#ifdef SENSORS_ENABLE_RANGE_VL53L1X
+    // Height sensor without optical flow (VL53L1X on a Qwiic port):
+    // fly in altitude-hold mode - throttle stick centre holds the height.
+    if (isVl53l1xPresent && !isPmw3901Present) {
+        setCommandermode(ALTHOLD_MODE);
+        DEBUG_PRINTI("VL53L1X found: altitude hold enabled\n");
+    }
+#endif
+
     DEBUG_PRINTI("sensors init done");
     /*
     *get calib angle from NVS
@@ -551,11 +582,106 @@ static void sensorsDeviceInit(void)
     // sinPitch = sinf(configblockGetCalibPitch() * (float)M_PI / 180);
     // cosRoll = cosf(configblockGetCalibRoll() * (float)M_PI / 180);
     // sinRoll = sinf(configblockGetCalibRoll() * (float)M_PI / 180);
-    cosPitch = cosf(PITCH_CALIB * (float)M_PI / 180);
-    sinPitch = sinf(PITCH_CALIB * (float)M_PI / 180);
-    cosRoll = cosf(ROLL_CALIB * (float)M_PI / 180);
-    sinRoll = sinf(ROLL_CALIB * (float)M_PI / 180);
-    DEBUG_PRINTI("pitch_calib = %f,roll_calib = %f",PITCH_CALIB,ROLL_CALIB);
+    levelCalibApply(PITCH_CALIB, ROLL_CALIB);
+    levelCalibLoad();   // overrides the Kconfig angles if the app calibrated
+    DEBUG_PRINTI("pitch_calib = %f,roll_calib = %f", levelPitchDeg, levelRollDeg);
+}
+
+/* ======================= Level calibration ======================= */
+
+#define LEVEL_NVS_NS   "tdc"
+#define LEVEL_NVS_KEY  "level"
+
+static void levelCalibApply(float pitchDeg, float rollDeg)
+{
+    levelPitchDeg = pitchDeg;
+    levelRollDeg = rollDeg;
+    float sp = sinf(pitchDeg * (float)M_PI / 180), cp = cosf(pitchDeg * (float)M_PI / 180);
+    float sr = sinf(rollDeg * (float)M_PI / 180), cr = cosf(rollDeg * (float)M_PI / 180);
+    // written together; a single sample with mixed values is harmless (<1 ms)
+    cosPitch = cp;
+    sinPitch = sp;
+    cosRoll = cr;
+    sinRoll = sr;
+}
+
+static void levelCalibLoad(void)
+{
+    nvs_handle_t h;
+    float v[2];
+    size_t len = sizeof(v);
+    if (nvs_open(LEVEL_NVS_NS, NVS_READONLY, &h) == ESP_OK) {
+        if (nvs_get_blob(h, LEVEL_NVS_KEY, v, &len) == ESP_OK && len == sizeof(v)) {
+            levelCalibApply(v[0], v[1]);
+            DEBUG_PRINTI("level calibration loaded: pitch %.2f roll %.2f", (double)v[0], (double)v[1]);
+        }
+        nvs_close(h);
+    }
+}
+
+static void levelCalibSave(void)
+{
+    nvs_handle_t h;
+    float v[2] = {levelPitchDeg, levelRollDeg};
+    if (nvs_open(LEVEL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
+        nvs_set_blob(h, LEVEL_NVS_KEY, v, sizeof(v));
+        nvs_commit(h);
+        nvs_close(h);
+    }
+}
+
+bool levelCalibRun(float *pitchDeg, float *rollDeg, const char **err)
+{
+    const int n = 1000;   // 1 s at 1 kHz
+    levelCalibSum.x = levelCalibSum.y = levelCalibSum.z = 0;
+    levelCalibSumSq = 0;
+    levelCalibCount = 0;
+    levelCalibRemaining = n;
+    for (int i = 0; i < 40 && levelCalibRemaining > 0; i++) {
+        vTaskDelay(M2T(50));
+    }
+    if (levelCalibCount < n / 2) {
+        levelCalibRemaining = 0;
+        *err = "sensor not running";
+        return false;
+    }
+    float c = (float)levelCalibCount;
+    float ax = levelCalibSum.x / c, ay = levelCalibSum.y / c, az = levelCalibSum.z / c;
+    float meanSq = ax * ax + ay * ay + az * az;
+    float variance = levelCalibSumSq / c - meanSq;
+    if (variance > 0.0025f) {          // ~0.05 g of shaking
+        *err = "drone moved, keep it still";
+        return false;
+    }
+    float roll = atan2f(ay, az) * 180.0f / (float)M_PI;
+    float pitch = atan2f(ax, sqrtf(ay * ay + az * az)) * 180.0f / (float)M_PI;
+    if (fabsf(roll) > 15.0f || fabsf(pitch) > 15.0f) {
+        *err = "tilted more than 15 degrees, put it on flat ground";
+        return false;
+    }
+    levelCalibApply(pitch, roll);
+    levelCalibSave();
+    *pitchDeg = pitch;
+    *rollDeg = roll;
+    DEBUG_PRINTI("level calibrated: pitch %.2f roll %.2f", (double)pitch, (double)roll);
+    return true;
+}
+
+void levelCalibReset(void)
+{
+    nvs_handle_t h;
+    if (nvs_open(LEVEL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
+        nvs_erase_key(h, LEVEL_NVS_KEY);
+        nvs_commit(h);
+        nvs_close(h);
+    }
+    levelCalibApply(PITCH_CALIB, ROLL_CALIB);
+}
+
+void levelCalibGet(float *pitchDeg, float *rollDeg)
+{
+    *pitchDeg = levelPitchDeg;
+    *rollDeg = levelRollDeg;
 }
 
 static void sensorsSetupSlaveRead(void)
