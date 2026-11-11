@@ -41,6 +41,8 @@
 #define GROUND_HEIGHT_M         0.06f
 #define FLYING_HEIGHT_M         0.10f
 #define HEIGHT_LAND_TIMEOUT_MS  20000
+#define GROUND_LINK_LOST_MS     2000    // armed on the ground without the app -> disarm
+#define IDLE_DISARM_MS          20000   // armed on the ground and not taking off -> disarm
 
 static uint8_t armRequest = 0;
 static uint8_t landRequest = 0;
@@ -54,6 +56,7 @@ static uint32_t landStartTick = 0;
 static uint32_t groundSinceTick = 0;
 static float outputThrust = 0.0f;
 static float heightM = -1.0f;
+static uint32_t idleSinceTick = 0;
 
 static bool heightSensorPresent(void)
 {
@@ -137,6 +140,7 @@ void flightSafetyUpdate(setpoint_t *sp)
   if (state == SAFETY_DISARMED) {
     if (armRequest && sp->thrust <= 0.0f && !linkLost) {
       state = SAFETY_ARMED;
+      idleSinceTick = 0;
       DEBUG_PRINTI("armed\n");
     }
   } else if (!armRequest) {
@@ -151,6 +155,28 @@ void flightSafetyUpdate(setpoint_t *sp)
 
     case SAFETY_ARMED:
       pilotThrust += THRUST_FILTER * (sp->thrust - pilotThrust);
+      if (!isFlying(sp)) {
+        // On the ground: don't stay armed without a pilot or forever idle.
+        uint32_t now = xTaskGetTickCount();
+        if (idleSinceTick == 0) {
+          idleSinceTick = now;
+        }
+        if (commanderGetInactivityTime() > M2T(GROUND_LINK_LOST_MS)) {
+          disarm("app disconnected on the ground");
+          sp->thrust = 0.0f;
+          return;
+        }
+        bool idleStick = sp->mode.z == modeVelocity ? (sp->velocity.z <= 0.05f) : (sp->thrust <= 0.0f);
+        if (!idleStick) {
+          idleSinceTick = now;
+        } else if (T2M(now - idleSinceTick) > IDLE_DISARM_MS) {
+          disarm("idle on the ground");
+          sp->thrust = 0.0f;
+          return;
+        }
+      } else {
+        idleSinceTick = 0;
+      }
       if (landRequest) {
         startLanding(SAFETY_LANDING, sp);
       } else if (linkLost && isFlying(sp)) {

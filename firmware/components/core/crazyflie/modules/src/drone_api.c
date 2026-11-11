@@ -128,12 +128,12 @@ static esp_err_t status_handler(httpd_req_t *req)
              "\"battery_v\":%.2f,\"battery_pct\":%u,"
              "\"state\":%d,\"height\":%.2f,\"tof\":%s,"
              "\"level_pitch\":%.2f,\"level_roll\":%.2f,"
-             "\"ssid\":\"%s\",\"fw\":\"%s\",\"ota\":true,\"stream_port\":81,"
+             "\"ssid\":\"%s\",\"channel\":%u,\"fw\":\"%s\",\"ota\":true,\"stream_port\":81,"
              "\"board\":\"XIAO_ESP32S3\"}",
              cam ? "true" : "false", sensor, frame,
              pmGetBatteryVoltage(), (unsigned)pmGetBatteryPercent(),
              (int)flightSafetyGetState(), h, h >= 0 ? "true" : "false",
-             lp, lr, wifiGetSsid(), DRONE_FW_VERSION);
+             lp, lr, wifiGetSsid(), (unsigned)wifiGetChannel(), DRONE_FW_VERSION);
     return send_json(req, "200 OK", json);
 }
 

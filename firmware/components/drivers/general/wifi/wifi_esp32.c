@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 
 #include "config.h"
 #include "freertos/FreeRTOS.h"
@@ -208,6 +209,61 @@ const char *wifiGetSsid(void)
     return WIFI_SSID;
 }
 
+uint8_t wifiGetChannel(void)
+{
+    return WIFI_CH;
+}
+
+#ifdef CONFIG_DRONE_WIFI_AUTO_CHANNEL
+/*
+ * Scan once before the access point starts and pick whichever of 1 / 6 / 11
+ * has the least nearby traffic (overlapping channels count, stronger APs count
+ * more). Keeps several drones at a meetup from all fighting over channel 1.
+ */
+static uint8_t pickQuietChannel(void)
+{
+    static const uint8_t candidates[3] = {1, 6, 11};
+    float load[3] = {0, 0, 0};
+
+    if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK || esp_wifi_start() != ESP_OK) {
+        return WIFI_CH;
+    }
+    wifi_scan_config_t scan = {
+        .show_hidden = true,
+        .scan_type = WIFI_SCAN_TYPE_ACTIVE,
+        .scan_time.active = { .min = 60, .max = 120 },
+    };
+    uint16_t n = 0;
+    if (esp_wifi_scan_start(&scan, true) == ESP_OK) {
+        esp_wifi_scan_get_ap_num(&n);
+        wifi_ap_record_t *recs = n ? calloc(n, sizeof(wifi_ap_record_t)) : NULL;
+        if (recs && esp_wifi_scan_get_ap_records(&n, recs) == ESP_OK) {
+            for (int i = 0; i < n; i++) {
+                float w = recs[i].rssi > -60 ? 3.0f : recs[i].rssi > -75 ? 2.0f : 1.0f;
+                for (int c = 0; c < 3; c++) {
+                    int d = abs((int)recs[i].primary - (int)candidates[c]);
+                    if (d < 5) {
+                        load[c] += w * (5 - d) / 5.0f;
+                    }
+                }
+            }
+        }
+        free(recs);
+    }
+    esp_wifi_stop();
+
+    int best = 0;
+    for (int c = 1; c < 3; c++) {
+        if (load[c] < load[best]) {
+            best = c;
+        }
+    }
+    DEBUG_PRINT_LOCAL("wifi scan: %u APs, load ch1=%.1f ch6=%.1f ch11=%.1f -> channel %u",
+                      n, (double)load[0], (double)load[1], (double)load[2], candidates[best]);
+    return candidates[best];
+}
+#endif
+
 void wifiInit(void)
 {
     if (isInit) {
@@ -247,6 +303,11 @@ void wifiInit(void)
         }
         nvs_close(nvs);
     }
+
+#ifdef CONFIG_DRONE_WIFI_AUTO_CHANNEL
+    esp_netif_create_default_wifi_sta();   // needed for the one-off scan
+    WIFI_CH = pickQuietChannel();
+#endif
 
     wifi_config_t wifi_config = {
         .ap = {

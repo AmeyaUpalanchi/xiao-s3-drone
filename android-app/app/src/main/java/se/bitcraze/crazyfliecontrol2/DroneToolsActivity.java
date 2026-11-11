@@ -233,7 +233,7 @@ public class DroneToolsActivity extends AppCompatActivity {
                 mMain.post(() -> {
                     String ssid = s.optString("ssid", "?");
                     String fw = s.optString("fw", "?");
-                    mStatus.setText(getString(R.string.tools_online, ssid, fw));
+                    mStatus.setText(getString(R.string.tools_online, ssid, fw, s.optInt("channel", 1)));
                     mWifiCurrent.setText(getString(R.string.wifi_current_fmt, ssid));
                     mFwCurrent.setText(getString(R.string.fw_current_fmt, fw));
                     if (ssid.startsWith(DroneNetwork.DRONE_SSID_PREFIX) && mWifiName.getText() != null

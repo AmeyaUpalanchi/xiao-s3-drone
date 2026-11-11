@@ -79,6 +79,20 @@ menu "ESPDrone Config"
 
     menu "system"
 
+        config DRONE_DEBUG_PRINTS
+            bool "Print attitude, commands and motor values to the console (10 Hz)"
+            default n
+            help
+                Bench debugging only. Printing from the 1 kHz flight loop can stall it,
+                so keep this off for flying.
+
+        config DRONE_WIFI_AUTO_CHANNEL
+            bool "Pick the least crowded Wi-Fi channel (1, 6 or 11) at boot"
+            default y
+            help
+                Scans for about 2 s before starting the access point. Helps when
+                several drones and phones fly in the same place.
+
         config BASE_STACK_SIZE
             int "base stack size for system task"
             range 512 1024

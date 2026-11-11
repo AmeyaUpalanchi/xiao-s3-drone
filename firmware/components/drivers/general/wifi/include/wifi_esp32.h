@@ -22,6 +22,9 @@ void wifiInit(void);
 /** SSID the drone is broadcasting (ESP-DRONE_<name or MAC>). */
 const char *wifiGetSsid(void);
 
+/** Wi-Fi channel the access point is on (picked at boot). */
+uint8_t wifiGetChannel(void);
+
 /**
  * Test the WIFI status.
  *

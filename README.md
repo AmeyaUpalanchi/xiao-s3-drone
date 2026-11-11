@@ -97,6 +97,28 @@ idf.py -p /dev/cu.usbmodem* flash monitor
 
 Wi-Fi: SSID `ESP-DRONE_<mac>`, password `12345678`, drone IP `192.168.43.42`.
 
+## Release package
+
+`dist/TheDroneCommunity-v1.2.0.zip` holds everything a community member needs:
+- the app
+- a single-file firmware image with one-step flash scripts for Mac, Linux and Windows
+- the over-the-air update file
+- a quick-start guide
+
+Rebuild it for a new version with:
+
+```bash
+tools/package-release.sh 1.3.0
+```
+
+### Firmware behaviour the app relies on (1.2.0)
+
+- Boots **disarmed**; the app arms it (`safety.armed`).
+- Disarms itself after 20 s idle on the ground, or 2 s after the app disconnects on the ground.
+- Lands itself if the link drops in the air or the battery is critical.
+- Picks the quietest Wi-Fi channel (1, 6 or 11) at boot (`CONFIG_DRONE_WIFI_AUTO_CHANNEL`).
+- Flight-loop debug printing is off unless `CONFIG_DRONE_DEBUG_PRINTS` is enabled.
+
 ## Android app
 
 Open `android-app/` in Android Studio, or build from the terminal:

@@ -292,16 +292,19 @@ static void stabilizerTask(void* param)
       }
 
       stateEstimator(&state, &sensorData, &control, tick);
+#ifdef CONFIG_DRONE_DEBUG_PRINTS
       if (RATE_DO_EXECUTE(10, tick)) {
         printf("att roll=%.1f pitch=%.1f yaw=%.1f\n",
                (double)state.attitude.roll,
                (double)state.attitude.pitch,
                (double)state.attitude.yaw);
       }
+#endif
       compressState();
 
       commanderGetSetpoint(&setpoint, &state);
       flightSafetyUpdate(&setpoint);   // arm/disarm, auto-land, kill, failsafe
+#ifdef CONFIG_DRONE_DEBUG_PRINTS
       if (RATE_DO_EXECUTE(10, tick)) {
         printf("cmd thr=%.0f roll=%.1f pitch=%.1f yawRate=%.1f\n",
                (double)setpoint.thrust,
@@ -309,6 +312,7 @@ static void stabilizerTask(void* param)
                (double)setpoint.attitude.pitch,
                (double)setpoint.attitudeRate.yaw);
       }
+#endif
       compressSetpoint();
 
       sitAwUpdateSetpoint(&setpoint, &sensorData, &state);

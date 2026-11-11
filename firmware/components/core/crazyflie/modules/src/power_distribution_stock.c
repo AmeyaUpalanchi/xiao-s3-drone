@@ -103,6 +103,7 @@ void powerDistribution(const control_t *control)
                                control->yaw);
   #endif
 
+#ifdef CONFIG_DRONE_DEBUG_PRINTS
   static uint16_t dbgCnt = 0;
   if (++dbgCnt >= 100) {
     dbgCnt = 0;
@@ -110,6 +111,7 @@ void powerDistribution(const control_t *control)
            (unsigned)motorPower.m1, (unsigned)motorPower.m2,
            (unsigned)motorPower.m3, (unsigned)motorPower.m4);
   }
+#endif
 
   if (motorSetEnable)
   {
