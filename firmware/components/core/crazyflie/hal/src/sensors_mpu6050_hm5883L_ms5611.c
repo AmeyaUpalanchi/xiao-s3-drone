@@ -49,6 +49,7 @@
 #include "sound.h"
 #include "filter.h"
 #include "config.h"
+#include "imu_orientation.h"
 #include "stm32_legacy.h"
 
 #include "i2cdev.h"
@@ -395,6 +396,26 @@ void processAccGyroMeasurements(const uint8_t *buffer)
     }
 
     /* sensors step 2.4 convert  digtal value to physical angle */
+#ifdef CONFIG_XIAO_ESP32S3_BOARD
+    /* PCB1: sensor-to-body axis mapping lives in imu_orientation.h */
+    {
+        float gx = (gyroRaw.x - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
+        float gy = (gyroRaw.y - gyroBias.y) * SENSORS_DEG_PER_LSB_CFG;
+        float gz = (gyroRaw.z - gyroBias.z) * SENSORS_DEG_PER_LSB_CFG;
+        sensorData.gyro.x = IMU_TO_BODY_X(gx, gy, gz);
+        sensorData.gyro.y = IMU_TO_BODY_Y(gx, gy, gz);
+        sensorData.gyro.z = IMU_TO_BODY_Z(gx, gy, gz);
+    }
+    applyAxis3fLpf((lpf2pData *)(&gyroLpf), &sensorData.gyro);
+    {
+        float ax = accelRaw.x * SENSORS_G_PER_LSB_CFG / accScale;
+        float ay = accelRaw.y * SENSORS_G_PER_LSB_CFG / accScale;
+        float az = accelRaw.z * SENSORS_G_PER_LSB_CFG / accScale;
+        accScaled.x = IMU_TO_BODY_X(ax, ay, az);
+        accScaled.y = IMU_TO_BODY_Y(ax, ay, az);
+        accScaled.z = IMU_TO_BODY_Z(ax, ay, az);
+    }
+#else
 #ifdef CONFIG_TARGET_ESPLANE_V1
     //sensorData.gyro.x = (gyroRaw.x - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
     sensorData.gyro.x = -(gyroRaw.x - gyroBias.x) * SENSORS_DEG_PER_LSB_CFG;
@@ -416,6 +437,7 @@ void processAccGyroMeasurements(const uint8_t *buffer)
 
     accScaled.y = -(accelRaw.y) * SENSORS_G_PER_LSB_CFG / accScale;
     accScaled.z = (accelRaw.z) * SENSORS_G_PER_LSB_CFG / accScale;
+#endif /* CONFIG_XIAO_ESP32S3_BOARD */
 
     /* Level calibration: collect unrotated samples while requested */
     if (levelCalibRemaining > 0) {

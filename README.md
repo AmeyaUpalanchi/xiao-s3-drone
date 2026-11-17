@@ -23,9 +23,9 @@ Two projects live here:
 | Status LED | on-board user LED | - | 21 (active low) |
 | MPU6050 INT | not routed | - | polled at 1 kHz |
 
-> **Check motor 2.** The net is labelled `MOTOR2_D8`, but it lands on pin 7 of the
-> right-hand XIAO header (U4), which is **D7 / GPIO44**. The firmware follows the copper.
-> If motor 2 does not spin, set `MOTOR02_PIN` to `7` (D8) in `idf.py menuconfig`.
+> **Motor 2 is on D7.** The net is labelled `MOTOR2_D8`, but it lands on pin 7 of the
+> right-hand XIAO header (U4), which is **D7 / GPIO44** (checked with a multimeter,
+> 2026-11-18). The firmware uses GPIO44.
 
 GPIO44 is UART0 RX, so the console runs on the XIAO's USB-C port (USB-Serial/JTAG).
 
@@ -84,6 +84,15 @@ disarms on touchdown, and the app shows a Take off button that climbs to about 0
 **Flash layout changed** to two app slots for wireless updates (`partitions.csv`).
 Flash once over USB with `idf.py flash` or `dist/firmware/flash.sh`. After that,
 updates can go over Wi-Fi from the app.
+
+### IMU orientation check
+
+The MPU6050 axis mapping lives in `firmware/components/config/include/imu_orientation.h`
+(on PCB1: forward = +sensor Y, left = -sensor X, up = +sensor Z, confirmed by tilt test).
+To re-check it, enable *ESPDrone Config -> system -> IMU bench test* in `idf.py menuconfig`,
+flash, and run `python3 tools/imu-viewer/server.py`, then open http://localhost:8765.
+The bench test holds all motor pins LOW and never starts the flight stack. Turn it off again
+before flying.
 
 ### Build and flash
 

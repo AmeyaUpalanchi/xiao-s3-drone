@@ -33,9 +33,18 @@
 #define DEBUG_MODULE "APP_MAIN"
 #include "debug_cf.h"
 #include "esp_system.h"
+#include "sdkconfig.h"
+#ifdef CONFIG_DRONE_IMU_BENCH_TEST
+#include "imu_bench_test.h"
+#endif
 
 void app_main()
 {
+#ifdef CONFIG_DRONE_IMU_BENCH_TEST
+    /* Bench test: motor pins LOW first, then IMU attitude printing. Never returns. */
+    imuBenchHoldMotorsLow();
+    imuBenchTestRun();
+#endif
     esp_reset_reason_t rr = esp_reset_reason();
     printf("\n\n### LAST RESET REASON = %d ###\n\n", rr);
     /*

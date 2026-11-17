@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone Orientation Check</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #ffffff; --ink: #14171c; --muted: #5f6875; --line: #dfe3e8;
+    --accent: #e0592a; --ok: #1d8f4e; --bad: #cf3e3e; --warn: #b07a00;
+    --plate: #2d3a4b; --under: #a0753a; --arm: #46566b; --motor: #7d8a9b; --grid: #d5dae1;
+    --shadow: rgba(20, 30, 45, .12); --ghost: #e0592a; --chip: #eef1f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --ink: #e7eaee; --muted: #98a1ad; --line: #2a3038;
+      --accent: #ff7a45; --ok: #3cc07a; --bad: #ff6b6b; --warn: #e3b341;
+      --plate: #a9bdd6; --under: #d39b52; --arm: #7f93ad; --motor: #c3ccd8; --grid: #252b33;
+      --shadow: rgba(0, 0, 0, .35); --ghost: #ff7a45; --chip: #20262e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px;
+           border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; }
+  .pill { font-size: 12.5px; padding: 3px 10px; border-radius: 99px; background: var(--chip); color: var(--muted); }
+  .pill.live { color: var(--ok); } .pill.wait { color: var(--warn); } .pill.bad { color: var(--bad); }
+  .devmsg { color: var(--muted); font-size: 13px; margin-left: auto; max-width: 52ch; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; }
+  main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 16px;
+         padding: 16px 20px 28px; max-width: 1280px; margin: 0 auto; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 12px 16px 24px; } .devmsg { margin-left: 0; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  #view { width: 100%; aspect-ratio: 4 / 3; display: block; touch-action: none; }
+  .readouts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  @media (max-width: 520px) { .readouts { grid-template-columns: repeat(2, 1fr); } }
+  .ro { background: var(--chip); border-radius: 10px; padding: 10px 12px; }
+  .ro .k { font-size: 12px; color: var(--muted); }
+  .ro .v { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .ro .h { font-size: 12px; color: var(--muted); min-height: 1.2em; }
+  .raw { margin-top: 10px; font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+  .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .step { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid;
+          grid-template-columns: 26px 1fr; gap: 2px 10px; }
+  .step .n { grid-row: span 3; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+             font-size: 12.5px; font-weight: 650; background: var(--chip); color: var(--muted); }
+  .step.cur { border-color: var(--accent); }
+  .step.cur .n { background: var(--accent); color: #fff; }
+  .step.ok .n { background: var(--ok); color: #fff; }
+  .step.bad .n { background: var(--bad); color: #fff; }
+  .step.warn .n { background: var(--warn); color: #fff; }
+  .step .t { font-weight: 600; }
+  .step .e { font-size: 13px; color: var(--muted); }
+  .step .r { font-size: 13.5px; }
+  .step.ok .r { color: var(--ok); } .step.bad .r { color: var(--bad); } .step.warn .r { color: var(--warn); }
+  .now { margin: 12px 0 4px; padding: 12px; border-radius: 10px; background: var(--chip); }
+  .now b { display: block; margin-bottom: 4px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 10px; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s linear; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button { font: inherit; font-size: 13.5px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--panel); color: var(--ink); cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button:disabled { opacity: .45; cursor: default; }
+  .side { display: grid; gap: 16px; align-content: start; }
+  pre { background: var(--chip); border-radius: 8px; padding: 10px 12px; overflow-x: auto;
+        font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 8px 0 0; }
+  .verdict { font-weight: 600; }
+  .verdict.ok { color: var(--ok); } .verdict.bad { color: var(--bad); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .banner { display: none; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+            background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--ink); }
+  .banner.show { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Drone orientation check</h1>
+  <span id="pill" class="pill wait">Waiting for the drone</span>
+  <span id="devmsg" class="devmsg"></span>
+</header>
+<main>
+  <section class="card">
+    <div id="banner" class="banner"></div>
+    <canvas id="view" aria-label="3D view of the drone's attitude"></canvas>
+    <div class="readouts">
+      <div class="ro"><div class="k">Pitch</div><div class="v" id="vp">--</div><div class="h" id="hp"></div></div>
+      <div class="ro"><div class="k">Roll</div><div class="v" id="vr">--</div><div class="h" id="hr"></div></div>
+      <div class="ro"><div class="k">Yaw</div><div class="v" id="vy">--</div><div class="h" id="hy"></div></div>
+      <div class="ro"><div class="k">Battery</div><div class="v" id="vb">--</div><div class="h" id="hb"></div></div>
+    </div>
+    <div class="raw" id="raw">raw accelerometer (sensor axes): --</div>
+    <div class="muted" style="margin-top:4px">Grey arrow on the ground: the heading the drone had when the page opened (or when you pressed Point view forward). Dashed outline: the pose the current step asks for.</div>
+    <div class="btns">
+      <button id="faceFwd">Point view forward</button>
+      <button id="recal">Restart drone and recalibrate</button>
+    </div>
+  </section>
+
+  <div class="side">
+    <section class="card">
+      <h2>Tilt test</h2>
+      <ol class="steps" id="steps"></ol>
+      <div class="now" id="now"><b id="nowT"></b><span id="nowH"></span><div class="bar"><i id="hold"></i></div></div>
+      <div class="btns">
+        <button id="restart">Start over</button>
+        <button id="skip">Skip this step</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Axis mapping</h2>
+      <div id="mapOut" class="muted">Finish steps 1 to 3 to work out how the sensor is mounted.</div>
+    </section>
+  </div>
+</main>
+
+<script>
+'use strict';
+const D = Math.PI / 180;
+const $ = id => document.getElementById(id);
+const fmt = v => (v >= 0 ? '+' : '') + v.toFixed(1);
+const wrap180 = a => { a = ((a + 180) % 360 + 360) % 360 - 180; return a; };
+const AX = ['X', 'Y', 'Z'];
+
+/* ---------- live data ---------- */
+let latest = null, lastAt = 0, yawZero = null;
+const hist = [];   // {t, p, r, y, raw}
+let current = { x: [1, 1], y: [-1, 0], z: [1, 2] };   // firmware mapping: [sign, sensor axis]
+
+function onAtt(ev) {
+  const now = performance.now();
+  latest = ev; lastAt = now;
+  if (yawZero === null) yawZero = ev.yaw;
+  hist.push({ t: now, p: ev.pitch, r: ev.roll, y: ev.yaw, raw: ev.raw || null });
+  while (hist.length && now - hist[0].t > 4000) hist.shift();
+  showReadouts(ev);
+  testTick(now);
+}
+
+function onMsg(text) {
+  $('devmsg').textContent = text;
+  const b = $('banner');
+  if (/Calibrating gyro/.test(text)) { b.textContent = 'Calibrating: leave the drone flat and still for 2 seconds.'; b.classList.add('show'); }
+  else if (/moved during calibration/.test(text)) { b.textContent = 'The drone moved while calibrating. Put it down and let go, it will retry by itself.'; b.classList.add('show'); }
+  else if (/STOPPED/.test(text)) { b.textContent = text; b.classList.add('show'); }
+  else if (/^Ready\./.test(text)) { b.classList.remove('show'); yawZero = null; restartTest(); }
+  const m = text.match(/Axis mapping: body x\(fwd\)=([+-])s([XYZ])\s+y\(left\)=([+-])s([XYZ])\s+z\(up\)=([+-])s([XYZ])/);
+  if (m) {
+    const p = i => [m[i] === '-' ? -1 : 1, AX.indexOf(m[i + 1])];
+    current = { x: p(1), y: p(3), z: p(5) };
+  }
+}
+
+function showReadouts(ev) {
+  $('vp').textContent = fmt(ev.pitch) + '°';
+  $('vr').textContent = fmt(ev.roll) + '°';
+  $('vy').textContent = fmt(ev.yaw) + '°';
+  $('vb').textContent = ev.vbat.toFixed(2) + ' V';
+  $('hp').textContent = Math.abs(ev.pitch) < 3 ? 'level' : ev.pitch > 0 ? 'nose up' : 'nose down';
+  $('hr').textContent = Math.abs(ev.roll) < 3 ? 'level' : ev.roll > 0 ? 'right side down' : 'left side down';
+  $('hy').textContent = '+ = clockwise';
+  $('hb').textContent = ev.vbat < 0.5 ? 'USB only, no battery' : '';
+  if (ev.raw) $('raw').textContent = 'raw accelerometer (sensor axes): X ' + ev.raw[0].toFixed(2) +
+      '  Y ' + ev.raw[1].toFixed(2) + '  Z ' + ev.raw[2].toFixed(2) + ' g';
+}
+
+function connect() {
+  const es = new EventSource('/events');
+  es.onmessage = e => { const ev = JSON.parse(e.data); ev.t === 'att' ? onAtt(ev) : onMsg(ev.text); };
+  es.onerror = () => { $('pill').textContent = 'Viewer server not running'; $('pill').className = 'pill bad'; };
+}
+setInterval(() => {
+  const pill = $('pill');
+  if (latest && performance.now() - lastAt < 1500) { pill.textContent = 'Live'; pill.className = 'pill live'; }
+  else if (pill.className !== 'pill bad') { pill.textContent = 'Waiting for the drone'; pill.className = 'pill wait'; }
+}, 500);
+
+/* ---------- tilt test ---------- */
+const STEPS = [
+  { id: 'flat',  t: 'Flat',                   e: 'expect pitch ≈ 0, roll ≈ 0',
+    h: 'Put the drone flat on the table and let go.' },
+  { id: 'nose',  t: 'Nose up about 30°',      e: 'expect pitch ≈ +30',
+    h: 'Lift the USB-C end about 30° (prop it on something ~2.5 cm tall). Keep the sides level and hold still.' },
+  { id: 'right', t: 'Right side down about 30°', e: 'expect roll ≈ +30',
+    h: 'Tip it so the right side goes down about 30° (prop the LEFT side up). Keep the nose level and hold still.' },
+  { id: 'yaw',   t: 'Turn clockwise 90°',     e: 'expect yaw to change by ≈ +90',
+    h: 'Keep it flat on the table and turn it a quarter turn clockwise, seen from above. Then let go.' },
+];
+const T = { i: 0, phase: 'pose', flat: null, res: {}, yawStart: null, note: '' };
+
+function window_(ms) { const now = performance.now(); return hist.filter(s => now - s.t <= ms); }
+function stable(ms, yawToo) {
+  const w = window_(ms);
+  if (w.length < ms / 1000 * 14) return false;
+  const rng = f => Math.max(...w.map(f)) - Math.min(...w.map(f));
+  if (rng(s => s.p) > 4 || rng(s => s.r) > 4) return false;
+  if (yawToo && rng(s => wrap180(s.y - w[0].y)) > 3) return false;
+  if (w[0].raw) for (let k = 0; k < 3; k++) if (rng(s => s.raw[k]) > 0.08) return false;
+  return true;
+}
+function avg(ms) {
+  const w = window_(ms), n = w.length, a = { p: 0, r: 0, y: 0, raw: [0, 0, 0] };
+  for (const s of w) {
+    a.p += s.p / n; a.r += s.r / n; a.y += wrap180(s.y - w[0].y) / n;
+    if (s.raw) for (let k = 0; k < 3; k++) a.raw[k] += s.raw[k] / n;
+  }
+  a.y = wrap180(a.y + w[0].y);
+  return a;
+}
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const isFlatNow = () => latest && (T.flat && latest.raw
+  ? dist(latest.raw, T.flat.raw) < 0.12
+  : Math.abs(latest.pitch) < 10 && Math.abs(latest.roll) < 10);
+const tilted = () => latest && (T.flat && latest.raw
+  ? dist(latest.raw, T.flat.raw) > 0.25
+  : Math.max(Math.abs(latest.pitch), Math.abs(latest.roll)) > 15);
+
+function restartTest() {
+  T.i = 0; T.phase = 'pose'; T.flat = null; T.res = {}; T.yawStart = null; T.note = '';
+  renderSteps(); renderMap();
+}
+function enterStep(i) {
+  T.i = i; T.note = '';
+  const s = STEPS[i];
+  T.phase = (s && s.id !== 'flat') ? 'needFlat' : 'pose';
+  renderSteps();
+}
+let holdFrac = 0;
+function testTick(now) {
+  const s = STEPS[T.i];
+  if (!s || !latest) { holdFrac = 0; return; }
+  holdFrac = 0;
+  if (T.phase === 'needFlat') {
+    if (isFlatNow() && stable(700, s.id === 'yaw')) {
+      T.phase = 'pose';
+      if (s.id === 'yaw') T.yawStart = avg(700).y;
+      renderSteps();
+    }
+    return;
+  }
+  if (s.id === 'flat') {
+    holdFrac = holdProgress(1500, () => true);
+    if (holdFrac >= 1) captureFlat();
+  } else if (s.id === 'nose' || s.id === 'right') {
+    holdFrac = tilted() ? holdProgress(1500, tilted) : 0;
+    if (holdFrac >= 1) captureTilt(s.id);
+  } else if (s.id === 'yaw') {
+    const turned = () => isFlatNow() && Math.abs(wrap180(latest.yaw - T.yawStart)) > 45;
+    holdFrac = turned() ? holdProgress(1000, turned, true) : 0;
+    if (holdFrac >= 1) captureYaw();
+  }
+}
+function holdProgress(ms, cond, yawToo) {
+  for (let f = 1; f >= 0.2; f -= 0.2) if (cond() && stable(ms * f, yawToo)) return f;
+  return 0;
+}
+
+function captureFlat() {
+  const a = avg(1500);
+  const r = { pitch: a.p, roll: a.r, raw: a.raw };
+  let up = 0; for (let k = 1; k < 3; k++) if (Math.abs(a.raw[k]) > Math.abs(a.raw[up])) up = k;
+  r.up = [Math.sign(a.raw[up]), up];
+  if (Math.abs(a.p) < 8 && Math.abs(a.r) < 8) { r.v = 'ok'; r.text = 'pitch ' + fmt(a.p) + ', roll ' + fmt(a.r) + ': level'; }
+  else if (Math.abs(a.p) > 45 || Math.abs(a.r) > 45) { r.v = 'bad'; r.text = 'pitch ' + fmt(a.p) + ', roll ' + fmt(a.r) + ': far off, the up axis is wrong'; }
+  else { r.v = 'warn'; r.text = 'pitch ' + fmt(a.p) + ', roll ' + fmt(a.r) + ': a few degrees off (surface or mounting; the app\'s level calibration removes this)'; }
+  T.flat = r; T.res.flat = r;
+  report(); enterStep(1);
+}
+
+function captureTilt(id) {
+  const a = avg(1500), d = [0, 1, 2].map(k => a.raw[k] - T.flat.raw[k]);
+  const up = T.flat.up[1], hz = [0, 1, 2].filter(k => k !== up);
+  const [k1, k2] = Math.abs(d[hz[0]]) >= Math.abs(d[hz[1]]) ? hz : [hz[1], hz[0]];
+  if (Math.abs(d[k2]) > 0.5 * Math.abs(d[k1])) {
+    T.note = 'That tilt was diagonal (pitch ' + fmt(a.p) + ', roll ' + fmt(a.r) + '). Tilt along one line only and try again.';
+    T.phase = 'needFlat'; renderSteps(); return;
+  }
+  // Accelerometer reads +g along the axis that points up. Nose up: forward axis gains +.
+  // Right side down: the left axis points up, so the left axis gains +.
+  const axis = [Math.sign(d[k1]), k1];
+  const r = { pitch: a.p, roll: a.r, raw: a.raw, delta: d, axis };
+  const want = id === 'nose' ? a.p : a.r, other = id === 'nose' ? a.r : a.p;
+  const wantName = id === 'nose' ? 'pitch' : 'roll', otherName = id === 'nose' ? 'roll' : 'pitch';
+  if (Math.abs(want) >= 12 && Math.abs(other) < Math.abs(want) / 2) {
+    if (want > 0) { r.v = 'ok'; r.text = wantName + ' ' + fmt(want) + ': correct'; }
+    else { r.v = 'bad'; r.code = wantName + '_sign'; r.text = wantName + ' ' + fmt(want) + ': the sign is flipped'; }
+  } else if (Math.abs(other) >= 12 && Math.abs(want) < Math.abs(other) / 2) {
+    r.v = 'bad'; r.code = 'swapped';
+    r.text = 'showed up as ' + otherName + ' ' + fmt(other) + ' instead: pitch and roll are swapped';
+  } else {
+    r.v = 'bad'; r.code = 'mixed'; r.text = 'pitch ' + fmt(a.p) + ', roll ' + fmt(a.r) + ': mixed reading';
+  }
+  if (id === 'right' && T.res.nose && T.res.nose.axis[1] === k1) {
+    T.note = 'The same sensor axis moved as for nose up. Tip it sideways this time and try again.';
+    T.phase = 'needFlat'; renderSteps(); return;
+  }
+  T.res[id] = r;
+  report(); enterStep(T.i + 1); renderMap();
+}
+
+function captureYaw() {
+  const a = avg(1000), dy = wrap180(a.y - T.yawStart);
+  const r = { delta: dy };
+  if (dy > 45 && dy < 135) { r.v = 'ok'; r.text = 'yaw changed by ' + fmt(dy) + '°: correct'; }
+  else if (dy < -45 && dy > -135) { r.v = 'bad'; r.code = 'yaw_sign'; r.text = 'yaw changed by ' + fmt(dy) + '°: the sign is flipped'; }
+  else { r.v = 'warn'; r.text = 'yaw changed by ' + fmt(dy) + '°: turn it a quarter turn (90°)'; }
+  T.res.yaw = r;
+  report(); enterStep(T.i + 1); renderMap();
+}
+
+function deriveMapping() {
+  const f = T.res.flat, n = T.res.nose, rt = T.res.right;
+  if (!f || !n || !rt) return null;
+  const vec = ([s, k]) => { const v = [0, 0, 0]; v[k] = s; return v; };
+  const z = vec(f.up), x = vec(n.axis), y = vec(rt.axis);
+  const c = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];   // z × x = y
+  return { x: n.axis, y: rt.axis, z: f.up, consistent: dist(c, y) < 1e-6 };
+}
+const term = ([s, k]) => (s < 0 ? '-' : '+') + 's' + AX[k];
+const macro = (name, [s, k]) => '#define IMU_TO_BODY_' + name + '(sx, sy, sz)   ' +
+  (s < 0 ? '(-(s' : '((s') + AX[k].toLowerCase() + '))';
+const same = (a, b) => a[0] === b[0] && a[1] === b[1];
+
+function renderMap() {
+  const m = deriveMapping(), out = $('mapOut');
+  const cur = 'Firmware now: body x(fwd) = ' + term(current.x) + ', y(left) = ' + term(current.y) + ', z(up) = ' + term(current.z);
+  if (!m) { out.innerHTML = '<div class="muted">Finish steps 1 to 3 to work out how the sensor is mounted.</div><div class="muted">' + cur + '</div>'; return; }
+  const detected = 'Measured: body x(fwd) = ' + term(m.x) + ', y(left) = ' + term(m.y) + ', z(up) = ' + term(m.z);
+  if (!m.consistent) {
+    out.innerHTML = '<div class="verdict bad">The three readings don\'t fit together.</div><div class="muted">' + detected +
+      '. Start over and tilt straight along each line.</div>';
+    return;
+  }
+  const match = same(m.x, current.x) && same(m.y, current.y) && same(m.z, current.z);
+  out.innerHTML = match
+    ? '<div class="verdict ok">The firmware mapping is right.</div><div class="muted">' + detected + '</div>'
+    : '<div class="verdict bad">The firmware mapping needs changing.</div><div class="muted">' + cur + '<br>' + detected +
+      '</div><div class="muted" style="margin-top:8px">Put this in firmware/components/config/include/imu_orientation.h:</div><pre>' +
+      [macro('X', m.x), macro('Y', m.y), macro('Z', m.z)].join('\n') + '</pre>';
+  T.res.mapping = { measured: { x: term(m.x), y: term(m.y), z: term(m.z) },
+                    firmware: { x: term(current.x), y: term(current.y), z: term(current.z) }, match };
+  report();
+}
+
+function report() {
+  fetch('/result', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ time: new Date().toISOString(), results: T.res }) }).catch(() => {});
+}
+
+function renderSteps() {
+  $('steps').innerHTML = STEPS.map((s, i) => {
+    const r = T.res[s.id];
+    const cls = r ? r.v : i === T.i ? 'cur' : '';
+    return '<li class="step ' + cls + '"><span class="n">' + (r ? (r.v === 'ok' ? '✓' : r.v === 'bad' ? '✗' : '!') : i + 1) +
+      '</span><span class="t">' + s.t + '</span><span class="e">' + s.e + '</span><span class="r">' + (r ? r.text : '') + '</span></li>';
+  }).join('');
+  const s = STEPS[T.i];
+  if (!s) { $('nowT').textContent = 'Done'; $('nowH').textContent = 'Results are saved for Claude. Start over to repeat.'; return; }
+  $('nowT').textContent = 'Step ' + (T.i + 1) + ': ' + s.t;
+  $('nowH').textContent = (T.note ? T.note + ' ' : '') + (T.phase === 'needFlat' ? 'First put it back flat and let go.' : s.h);
+}
+$('restart').onclick = restartTest;
+$('skip').onclick = () => { if (T.i < STEPS.length) enterStep(T.i + 1); };
+$('faceFwd').onclick = () => { if (latest) yawZero = latest.yaw; };
+$('recal').onclick = () => fetch('/reset', { method: 'POST' }).catch(() => {});
+fetch('/info').then(r => r.json()).then(i => { if (!i.canReset) $('recal').disabled = true; }).catch(() => {});
+
+/* ---------- 3D view ---------- */
+// World and body frames: x forward, y left, z up (right-handed).
+// Angles in the drone's convention: pitch + nose up, roll + right side down, yaw + clockwise from above.
+function mul(A, B) { return A.map(r => [0, 1, 2].map(j => r[0] * B[0][j] + r[1] * B[1][j] + r[2] * B[2][j])); }
+function Rx(a) { const c = Math.cos(a), s = Math.sin(a); return [[1, 0, 0], [0, c, -s], [0, s, c]]; }
+function Ry(a) { const c = Math.cos(a), s = Math.sin(a); return [[c, 0, s], [0, 1, 0], [-s, 0, c]]; }
+function Rz(a) { const c = Math.cos(a), s = Math.sin(a); return [[c, -s, 0], [s, c, 0], [0, 0, 1]]; }
+const att = (p, r, y) => mul(Rz(-y * D), mul(Ry(-p * D), Rx(r * D)));
+const ap = (M, v) => [0, 1, 2].map(i => M[i][0] * v[0] + M[i][1] * v[1] + M[i][2] * v[2]);
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+
+const CAM_AZ = 22 * D, CAM_EL = 32 * D;
+const camF = [Math.cos(CAM_AZ), Math.sin(CAM_AZ), 0];
+const camU = [Math.sin(CAM_AZ), -Math.cos(CAM_AZ), 0];                       // screen right
+const camV = camF.map((f, i) => f * Math.sin(CAM_EL) + (i === 2 ? Math.cos(CAM_EL) : 0));   // screen up
+const camN = camF.map((f, i) => -f * Math.cos(CAM_EL) + (i === 2 ? Math.sin(CAM_EL) : 0));  // toward viewer
+
+const circle = (cx, cy, z, r, n = 22) => Array.from({ length: n }, (_, i) =>
+  [cx + r * Math.cos(i / n * 2 * Math.PI), cy + r * Math.sin(i / n * 2 * Math.PI), z]);
+function roundRect(h, rad, z) {
+  const pts = [], c = [[h - rad, -h + rad, -90], [h - rad, h - rad, 0], [-h + rad, h - rad, 90], [-h + rad, -h + rad, 180]];
+  for (const [x, y, a0] of c) for (let i = 0; i <= 5; i++) {
+    const a = (a0 + i * 18) * D; pts.push([x + rad * Math.cos(a), y + rad * Math.sin(a), z]);
+  }
+  return pts;
+}
+const MOTORS = [['M1', 20, -20], ['M2', -20, -20], ['M3', -20, 20], ['M4', 20, 20]];   // body x, y(left)
+const PLATE = roundRect(15, 5, 0);
+const ARROW = [[15, 0, 0.6], [4, 6.5, 0.6], [7, 0, 0.6], [4, -6.5, 0.6]];
+const GROUND = -24;
+
+const cv = $('view'), ctx = cv.getContext('2d');
+let colors = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['ink', 'muted', 'accent', 'plate', 'under', 'arm', 'motor', 'grid', 'shadow', 'ghost', 'panel'])
+    colors[k] = cs.getPropertyValue('--' + k).trim();
+}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+
+const disp = { p: 0, r: 0, y: 0 };
+function frame() {
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const fixed = new URLSearchParams(location.search).get('pose');   // ?pose=pitch,roll,yaw for checking the view
+  let tp = 0, tr = 0, ty = 0;
+  if (fixed) [tp, tr, ty] = fixed.split(',').map(Number);
+  else if (latest) { tp = latest.pitch; tr = latest.roll; ty = wrap180(latest.yaw - (yawZero ?? latest.yaw)); }
+  disp.p += (tp - disp.p) * 0.35; disp.r += (tr - disp.r) * 0.35; disp.y += wrap180(ty - disp.y) * 0.35;
+
+  const sc = Math.min(W, H) / 95, cx = W / 2, cy = H * 0.56;
+  const proj = w => { const Z = dot(w, camN), k = 230 / (230 - Z);
+    return [cx + dot(w, camU) * k * sc, cy - dot(w, camV) * k * sc, Z]; };
+  const path = (pts, close = true) => { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); if (close) ctx.closePath(); };
+
+  // ground grid and start heading
+  ctx.lineWidth = 1; ctx.strokeStyle = colors.grid;
+  for (let i = -60; i <= 60; i += 15) {
+    path([proj([i, -60, GROUND]), proj([i, 60, GROUND])], false); ctx.stroke();
+    path([proj([-60, i, GROUND]), proj([60, i, GROUND])], false); ctx.stroke();
+  }
+  ctx.fillStyle = colors.muted;
+  path([[42, 0], [54, 0]].map(([x, y]) => proj([x, y, GROUND])), false); ctx.strokeStyle = colors.muted; ctx.lineWidth = 2; ctx.stroke();
+  path([[56, 0], [50, 3.5], [50, -3.5]].map(([x, y]) => proj([x, y, GROUND]))); ctx.fill();
+
+  const R = att(disp.p, disp.r, disp.y);
+  const W_ = pts => pts.map(p => ap(R, p));
+
+  // shadow on the ground
+  path(W_(PLATE).map(w => proj([w[0], w[1], GROUND]))); ctx.fillStyle = colors.shadow; ctx.fill();
+
+  // target pose for the current step
+  const s = STEPS[T.i];
+  if (s && T.phase === 'pose' && s.id !== 'flat' && !fixed) {
+    const G = s.id === 'nose' ? att(30, 0, disp.y) : s.id === 'right' ? att(0, 30, disp.y)
+      : att(0, 0, wrap180((T.yawStart ?? 0) - (yawZero ?? 0) + 90));
+    ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5; ctx.strokeStyle = colors.ghost; ctx.globalAlpha = 0.75;
+    path(PLATE.map(p => proj(ap(G, p)))); ctx.stroke();
+    path(ARROW.map(p => proj(ap(G, p)))); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+
+  // drone body, painter's order
+  const up = ap(R, [0, 0, 1]), topVisible = dot(up, camN) > 0;
+  const polys = [];
+  for (const [, mx, my] of MOTORS) {
+    const L = Math.hypot(mx, my), ux = mx / L, uy = my / L, w = 2.6;
+    polys.push({ pts: W_([[-uy * w, ux * w, -0.3], [mx - uy * w, my + ux * w, -0.3], [mx + uy * w, my - ux * w, -0.3], [uy * w, -ux * w, -0.3]]), fill: colors.arm });
+    polys.push({ pts: W_(circle(mx, my, 1.8, 5.5)), fill: colors.motor, stroke: colors.arm });
+  }
+  polys.push({ pts: W_(PLATE), fill: topVisible ? colors.plate : colors.under, stroke: colors.arm });
+  if (topVisible) polys.push({ pts: W_(ARROW), fill: colors.accent, z: 1e3 });
+  polys.forEach(o => { o.sp = o.pts.map(proj); if (o.z === undefined) o.z = o.sp.reduce((a, p) => a + p[2], 0) / o.sp.length; });
+  polys.sort((a, b) => a.z - b.z);
+  for (const o of polys) {
+    path(o.sp); ctx.fillStyle = o.fill; ctx.fill();
+    if (o.stroke) { ctx.strokeStyle = o.stroke; ctx.lineWidth = 1; ctx.stroke(); }
+  }
+  if (!topVisible) label(proj(ap(R, [0, 0, 0])), 'underside', colors.ink, 12);
+
+  for (const [n, mx, my] of MOTORS) label(proj(ap(R, [mx, my, 9])), n, colors.ink, 12);
+  label(proj(ap(R, [31, 0, 0])), 'FRONT · USB-C', colors.accent, 12.5, true);
+  label(proj(ap(R, [0, 27, 0])), 'L', colors.ink, 13, true);
+  label(proj(ap(R, [0, -27, 0])), 'R', colors.ink, 13, true);
+  requestAnimationFrame(frame);
+}
+function label(p, text, color, size, bold) {
+  ctx.font = (bold ? '650 ' : '500 ') + size + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 3; ctx.strokeStyle = colors.panel; ctx.strokeText(text, p[0], p[1]);
+  ctx.fillStyle = color; ctx.fillText(text, p[0], p[1]);
+}
+
+renderSteps(); renderMap();
+if (!new URLSearchParams(location.search).get('pose')) connect();   // ?pose= is a fixed preview
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

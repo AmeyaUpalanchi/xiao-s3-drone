@@ -79,6 +79,16 @@ menu "ESPDrone Config"
 
     menu "system"
 
+        config DRONE_IMU_BENCH_TEST
+            bool "IMU bench test (prints pitch/roll/yaw, does not fly)"
+            default n
+            help
+                Replaces the flight firmware with a bench test: holds all motor
+                pins LOW, scans I2C for the MPU6050, calibrates the gyro and prints
+                pitch, roll, yaw and battery voltage 20 times a second on the
+                USB-C console. Wi-Fi, the app and the motors are never started.
+                Turn this off again before flying.
+
         config DRONE_DEBUG_PRINTS
             bool "Print attitude, commands and motor values to the console (10 Hz)"
             default n
