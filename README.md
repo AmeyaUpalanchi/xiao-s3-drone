@@ -1,119 +1,207 @@
-# XIAO S3 Drone
+<h1 align="center">XIAO S3 Drone</h1>
 
-An open-source micro drone built around the **Seeed XIAO ESP32-S3**. You fly it from your
-phone over Wi-Fi. No radio transmitter, no receiver, no soldering of a flight controller
-from scratch. Made by **The Drone Community** for workshops and first builds.
+<p align="center">
+  An open-source micro quadcopter built on the Seeed XIAO ESP32-S3, flown from your phone over Wi-Fi.
+</p>
 
-![PCB1 flight board](docs/quick-guide/pcb1-top.png)
+<p align="center">
+  <a href="hardware/LICENSE"><img src="https://img.shields.io/badge/hardware-CERN--OHL--S--2.0-blue" alt="Hardware license: CERN-OHL-S-2.0"></a>
+  <a href="firmware/LICENSE"><img src="https://img.shields.io/badge/firmware-GPL--3.0-blue" alt="Firmware license: GPL-3.0"></a>
+  <a href="android-app/LICENSE.txt"><img src="https://img.shields.io/badge/app-GPL--2.0%2B-blue" alt="App license: GPL-2.0+"></a>
+  <img src="https://img.shields.io/badge/ESP--IDF-v5.0-red" alt="ESP-IDF v5.0">
+  <img src="https://img.shields.io/badge/board-XIAO%20ESP32--S3-green" alt="Board: Seeed XIAO ESP32-S3">
+  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84" alt="Android 8.0+">
+</p>
 
-## What it can do
+<p align="center">
+  <img src="docs/quick-guide/pcb1-top.png" alt="PCB1 flight board" width="45%">
+  &nbsp;
+  <img src="frame/renders/assembly_iso.png" alt="Drone on the TPU frame" width="45%">
+</p>
 
-- **Fly from a phone.** The drone makes its own Wi-Fi network; the Android app connects to it.
-  iPhones can fly it with Espressif's free ESP-Drone app.
-- **Stays safe on its own.** It starts disarmed, disarms itself when idle, lands by itself if
-  the phone disconnects or the battery runs low, and has a one-touch motor stop.
-- **Altitude hold** (optional). Plug a VL53L1X or VL53L0X distance sensor into the Qwiic port
-  and the drone holds its height, with a Take off button in the app.
-- **Live video** with the XIAO ESP32-S3 Sense camera: watch, take photos, record video.
-- **Tools in the app:** motor test, level calibration, flying styles (Beginner, Normal, Sport),
-  find-my-drone beeper, Wi-Fi name and password, firmware updates over Wi-Fi.
+<p align="center">
+  <a href="docs/install-guide/TDC_XIAO_S3_Drone_Install_Guide.pdf"><b>Install guide</b></a> ·
+  <a href="hardware/README.md"><b>Hardware</b></a> ·
+  <a href="../../releases"><b>Releases</b></a> ·
+  <a href="docs/DEVELOPER.md"><b>Developer notes</b></a> ·
+  <a href="tools/CHANGELOG.md"><b>Changelog</b></a>
+</p>
 
-## What's in this repo
+---
 
-| Folder | What's inside |
+## Contents
+
+- [Features](#features)
+- [Hardware at a glance](#hardware-at-a-glance)
+- [Quick start](#quick-start)
+- [Building from source](#building-from-source)
+- [Add-ons](#add-ons)
+- [Repository layout](#repository-layout)
+- [Documentation](#documentation)
+- [Safety](#safety)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgements](#acknowledgements)
+
+## Features
+
+- **Phone control over Wi-Fi.** The drone runs its own access point. Fly it with the Android app,
+  or with Espressif's ESP-Drone app on iPhone.
+- **Flight safety on the drone itself.** Boots disarmed, disarms when idle or when the phone
+  disconnects on the ground, lands automatically on link loss or low battery, and has a
+  hold-to-stop motor cut. All of it runs in firmware, so a frozen app can't override it.
+- **Altitude hold.** Plug a VL53L1X or VL53L0X time-of-flight sensor into a Qwiic port; the drone
+  detects it at boot and holds height, with one-tap take-off and soft landing.
+- **Live video.** With the XIAO ESP32-S3 Sense camera: MJPEG stream, photos and MP4 recording.
+- **On-board tools.** Motor test, level calibration, flying styles, find-my-drone beeper,
+  Wi-Fi name and password, and over-the-air firmware updates, all from the app.
+- **Open hardware.** Schematic, Gerbers, BOM with LCSC part numbers, pick-and-place and a 3D model,
+  plus a parametric 3D-printable frame.
+
+## Hardware at a glance
+
+| | |
 |---|---|
-| [`hardware/`](hardware/) | The PCB: schematic, Gerber files, bill of materials, pick-and-place, 3D model |
-| [`frame/`](frame/) | A 3D-printable TPU frame for 8520 motors and 75 mm props |
-| [`firmware/`](firmware/) | The flight software that runs on the XIAO (ESP-IDF) |
-| [`android-app/`](android-app/) | The Android app (Android Studio project) |
-| [`docs/`](docs/) | Install guide and quick guide (printable PDFs), developer notes |
-| [`tools/`](tools/) | Release packaging, IMU orientation viewer, changelog |
+| Flight controller | Seeed XIAO ESP32-S3 (240 MHz dual-core, Wi-Fi, 8 MB flash, 8 MB PSRAM) |
+| IMU | MPU-6050 on a GY-521 module (MPU6500-family clones supported) |
+| Board | PCB1: 50 × 50 mm, 2 layers, 4 × M3 on a 42.27 mm square |
+| Motors | 4 × 8520 coreless brushed, MOSFET-driven, JST SH 2-pin |
+| Propellers | 75 mm, 2 CW + 2 CCW |
+| Battery | 1S LiPo, XT30, with reverse-polarity and TVS protection |
+| Power | TPS61023 boost converter: 5 V for the XIAO from the 1S pack |
+| Expansion | 2 × Qwiic (JST SH 4-pin, 3.3 V I²C) |
+| Frame | TPU, ducted, 171.7 × 171.7 mm, 26 g printed |
 
-## I just want to fly
+Full details, pin map and ordering steps: [hardware/README.md](hardware/README.md).
 
-1. Download the latest files from the [Releases](../../releases) page: the firmware zip and
-   the app zip.
-2. Follow the **[Install Guide](docs/install-guide/TDC_XIAO_S3_Drone_Install_Guide.pdf)**
-   (2 pages). It covers flashing, Android, iPhone, the checks before the first flight and
-   troubleshooting.
+## Quick start
 
-The **[Quick Guide](docs/quick-guide/XIAO_S3_Drone_Quick_Guide.pdf)** explains the board,
-the wiring, the status lights and how to program it.
+You need an assembled drone, a USB-C data cable and Python 3.
 
-## Build your own
+**1. Download** the firmware and app zips from the [latest release](../../releases).
 
-### 1. Get the board
+**2. Flash** the drone with the battery unplugged:
 
-Order PCB1 from any PCB fab with the files in [`hardware/`](hardware/). The
-[hardware guide](hardware/README.md) walks you through ordering the bare board or a board
-with the small parts already fitted, and lists every part.
+```bash
+unzip TheDroneCommunity-firmware-<version>.zip
+cd TheDroneCommunity-firmware-<version>
+./flash-mac-linux.sh          # Windows: flash-windows.bat COM5
+```
 
-### 2. Gather the other parts
+**3. Install** `TheDroneCommunity-<version>.apk` on an Android phone.
 
-- Seeed XIAO ESP32-S3 (or XIAO ESP32-S3 Sense for video)
-- GY-521 MPU-6050 module
-- 4 × 8520 coreless motors (2 clockwise, 2 counter-clockwise) and 4 × 75 mm props
-- 1S LiPo battery with an XT30 plug
-- The printed TPU frame from [`frame/stl`](frame/stl), and 4 M3 screws
+**4. Fly.** Unplug USB, connect the battery, join the Wi-Fi network `ESP-DRONE_…`
+(password `12345678`), open the app and tap **Connect**, then **Arm**.
 
-### 3. Put it together
+Before the first flight, run the motor test and level calibration from the app. The
+[install guide](docs/install-guide/TDC_XIAO_S3_Drone_Install_Guide.pdf) covers every step,
+including iPhone setup and troubleshooting.
 
-1. Solder the XIAO headers and the 8-pin IMU header if your board came without them.
-2. Plug in the XIAO with its **USB-C end facing the front**.
-3. Plug in the GY-521 module, flat on its header.
-4. Fit the motors: **M1 front right and M3 rear left spin clockwise; M2 rear right and
-   M4 front left spin counter-clockwise.** Plug each into its JST connector.
-5. Screw the board onto the frame and fit the props to match the motors.
+## Building from source
 
-### 4. Flash the firmware
+### Firmware
 
-Plug the XIAO into a computer with **USB only, battery unplugged**, then run the flash script
-from the firmware zip. The [Install Guide](docs/install-guide/TDC_XIAO_S3_Drone_Install_Guide.pdf)
-has the exact steps for Mac, Linux and Windows.
+Requires [ESP-IDF v5.0.x](https://docs.espressif.com/projects/esp-idf/en/v5.0/esp32s3/get-started/).
 
-> **Never connect USB and the battery at the same time.** They share the XIAO's 5 V line, so
-> the computer would charge the battery and the USB port can shut down.
+```bash
+cd firmware
+. ~/esp/esp-idf/export.sh
+idf.py set-target esp32s3
+idf.py build
+idf.py -p /dev/cu.usbmodem* flash monitor
+```
 
-### 5. Fly
+Build options live in `idf.py menuconfig` under **ESPDrone Config**:
 
-1. Unplug USB and connect the battery.
-2. On your phone, join the Wi-Fi network `ESP-DRONE_…` (password `12345678`).
-3. Open the app, tap **Connect**, then **Arm**, and raise the throttle gently.
+| Option | Effect |
+|---|---|
+| `DRONE_AUTO_ARM` | iOS build: arms automatically for the ESP-Drone App Store app |
+| `DRONE_IMU_BENCH_TEST` | Replaces flight with an IMU orientation bench test |
+| `DRONE_MOTOR_AUTO_TEST` | Spins M1 to M4 in turn at power-up, then stops |
+| `DRONE_DEBUG_PRINTS` | Prints attitude, commands and motor output at 10 Hz |
 
-Do the motor test and level calibration in the app before the first flight, and take off low
-over a soft surface.
+### Android app
 
-## Optional: altitude hold
+Requires Android Studio (or JDK 17 and the Android SDK).
 
-Plug a **VL53L1X** (best, up to about 3 m indoors) or **VL53L0X** (up to about 1 m) distance
-sensor into either Qwiic port (JST SH 1.0 mm, 4-pin). Mount it under the drone facing the floor.
-The drone finds it at power-up; no settings needed. The app then shows **Take off**, and the
-throttle stick centre means "hold this height".
+```bash
+cd android-app
+./gradlew assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
+```
 
-## Optional: fly with an iPhone
+### Release package
 
-Flash the **iOS build** of the firmware (`…-ios` in Releases), then fly with
-[ESP-Drone](https://apps.apple.com/us/app/id1522247884) from the App Store. That app has no Arm
-button, so this build arms itself when the app connects with the throttle at zero.
-**Treat the props as live whenever the app is connected.**
+```bash
+tools/package-release.sh <version>
+```
 
-## For developers
+Builds the firmware and app and writes `dist/TheDroneCommunity-v<version>.zip` with flash
+scripts, the over-the-air update image and the guides.
 
-Build instructions, the pin map, the drone's web API and how the safety system works are in
-[docs/DEVELOPER.md](docs/DEVELOPER.md). What changed in each version is in
-[tools/CHANGELOG.md](tools/CHANGELOG.md).
+## Add-ons
 
-## Licenses
+| Add-on | How to fit it | What you get |
+|---|---|---|
+| VL53L1X distance sensor | Qwiic port (CN5 or CN6), facing the floor | Altitude hold up to about 3 m indoors |
+| VL53L0X distance sensor | Same | Altitude hold up to about 1 m |
+| XIAO ESP32-S3 Sense camera | Use the Sense version of the XIAO | Live video, photos, recording |
+| iPhone | Flash the `-ios` firmware, install [ESP-Drone](https://apps.apple.com/us/app/id1522247884) | Flying from iOS (the drone arms itself when the app connects) |
+
+## Repository layout
+
+```
+.
+├── android-app/     Android app (Android Studio project)
+├── docs/
+│   ├── install-guide/   Install guide (PDF + HTML source)
+│   ├── quick-guide/     Board quick guide (PDF + source)
+│   └── DEVELOPER.md     Internals: web API, safety system, pin map
+├── firmware/        Flight firmware (ESP-IDF, based on ESP-Drone / Crazyflie)
+├── frame/           Parametric OpenSCAD frame, STLs and renders
+├── hardware/        Schematic, Gerbers, BOM, pick-and-place, STEP model
+└── tools/           Release script, IMU orientation viewer, changelog
+```
+
+## Documentation
+
+| Document | For |
+|---|---|
+| [Install guide](docs/install-guide/TDC_XIAO_S3_Drone_Install_Guide.pdf) | Flashing, Android and iPhone setup, pre-flight checks, troubleshooting |
+| [Quick guide](docs/quick-guide/XIAO_S3_Drone_Quick_Guide.pdf) | Board tour, wiring, status lights, programming |
+| [Hardware](hardware/README.md) | Schematic, bill of materials, ordering and assembly |
+| [Frame](frame/README.md) | Printing the frame, dimensions, weight |
+| [Developer notes](docs/DEVELOPER.md) | Web API, flight safety, IMU mapping, release builds |
+| [Changelog](tools/CHANGELOG.md) | What changed in each version |
+
+## Safety
+
+- **Never connect USB and the battery at the same time.** Both feed the XIAO's 5 V line; the
+  computer would charge the battery and its USB port can shut down.
+- Remove the propellers for flashing, bench tests and the motor test.
+- With the iOS build, the motors spin as soon as the throttle rises while an app is connected.
+- Fly low and over a soft surface until you know the drone.
+- LiPo batteries can catch fire if damaged, over-charged or over-discharged. Charge them with a
+  proper LiPo charger and never leave them charging unattended.
+
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to report
+bugs, propose changes and test them on real hardware.
+
+## License
 
 | Part | License |
 |---|---|
-| Hardware (`hardware/`) | [CERN-OHL-S-2.0](hardware/LICENSE) |
+| Hardware design (`hardware/`) | [CERN-OHL-S-2.0](hardware/LICENSE) |
 | Firmware (`firmware/`) | [GPL-3.0](firmware/LICENSE) |
-| Android app (`android-app/`) | [GPL-2.0 or later](android-app/LICENSE.txt) |
+| Android app (`android-app/`) | [GPL-2.0-or-later](android-app/LICENSE.txt) |
 | Sora typeface | SIL Open Font License 1.1 |
 
-## Credits
+## Acknowledgements
 
-The firmware builds on [ESP-Drone](https://github.com/espressif/esp-drone) by Espressif and the
-[Crazyflie firmware](https://github.com/bitcraze/crazyflie-firmware) by Bitcraze. The app builds
-on ESP-Drone-Android and the Crazyflie Android client. Thank you to both communities.
+Built on [ESP-Drone](https://github.com/espressif/esp-drone) by Espressif Systems and the
+[Crazyflie firmware](https://github.com/bitcraze/crazyflie-firmware) by Bitcraze. The app is based
+on [ESP-Drone-Android](https://github.com/EspressifApps/ESP-Drone-Android) and the
+[Crazyflie Android client](https://github.com/bitcraze/crazyflie-android-client).
+
+Maintained by **The Drone Community**.
