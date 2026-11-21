@@ -14,9 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/quick-guide/pcb1-top.png" alt="PCB1 flight board" width="45%">
-  &nbsp;
-  <img src="frame/renders/assembly_iso.png" alt="Drone on the TPU frame" width="45%">
+  <img src="docs/quick-guide/pcb1-top.png" alt="PCB1 flight board" width="60%">
 </p>
 
 <p align="center">
