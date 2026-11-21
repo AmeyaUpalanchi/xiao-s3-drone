@@ -93,7 +93,7 @@ CL10A106KP8NNNC, which is LCSC part C19702.
 | 75 mm propellers | 4 | 2 CW + 2 CCW: M1 and M3 CW, M2 and M4 CCW |
 | 1S LiPo battery with an XT30 plug | 1 | Tested with a GNB 550 mAh 1S pack |
 | TPU frame | 1 | Print [`../frame/v2-strong/frame_v2_strong.stl`](../frame/v2-strong/) |
-| M3 screws | 4 | Board to frame |
+| M3 vibration-damping mounts (recommended) | 4 | Rubber soft-mount grommets between the board and the frame; keep motor vibration off the IMU. Plain M3 screws also work |
 | VL53L1X or VL53L0X height sensor (optional) | 1 | Plugs into CN5 or CN6 for altitude hold |
 
 ## License

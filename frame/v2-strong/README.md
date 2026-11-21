@@ -49,7 +49,10 @@ when pushed fast.
 2. Route each motor lead along the arm clips to its JST connector on the board.
 3. Slide the battery through the two strap loops under the board and press its leads into
    the grips.
-4. Screw PCB1 onto the four standoffs with M3 screws, USB-C end facing forward.
+4. Screw PCB1 onto the four standoffs, USB-C end facing forward. **M3 rubber vibration-damping
+   mounts (soft-mount grommets) are recommended** between the board and the standoffs: they keep
+   motor vibration away from the IMU, which gives a steadier hover and less drift. Plain M3
+   screws also work.
 
 ## Editing
 

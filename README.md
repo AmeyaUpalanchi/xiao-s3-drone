@@ -62,7 +62,7 @@
 |---|---|
 | Flight controller | Seeed XIAO ESP32-S3 (240 MHz dual-core, Wi-Fi, 8 MB flash, 8 MB PSRAM) |
 | IMU | MPU-6050 on a GY-521 module (MPU6500-family clones supported) |
-| Board | PCB1: 50 × 50 mm, 2 layers, 4 × M3 on a 42.27 mm square |
+| Board | PCB1: 50 × 50 mm, 2 layers, 4 × M3 on a 42.27 mm square (M3 vibration-damping mounts recommended) |
 | Motors | 4 × 8520 coreless brushed, MOSFET-driven, JST SH 2-pin |
 | Propellers | 75 mm, 2 CW + 2 CCW |
 | Battery | 1S LiPo with XT30, tested with a GNB 550 mAh pack; reverse-polarity and TVS protection on board |
