@@ -61,7 +61,7 @@ footer .rt { text-align: right; }
       <h1>XIAO S3 Drone <em>Install Guide</em></h1>
       <p class="sub">Put the firmware on the drone, then fly it from an Android phone or an iPhone</p>
     </div>
-    <div class="org"><b>The Drone Community</b><br>Firmware 1.2.3 · App 1.2.2 · Nov 2026</div>
+    <div class="org"><b>The Drone Community</b><br>Firmware and app 1.2.4 · Nov 2026</div>
   </header>
 
   <div class="grid" style="top:88px">
@@ -77,12 +77,12 @@ footer .rt { text-align: right; }
 
     <div class="panel full">
       <h2><i>1</i>Which files to use</h2>
-      <p>Pick the firmware by the phone that flies the drone. The drone reports its build as <code>fw 1.2.3-tdc</code> or <code>fw 1.2.3-tdc-ios</code>.</p>
+      <p>Pick the firmware by the phone that flies the drone. The drone reports its build as <code>fw 1.2.4-tdc</code> or <code>fw 1.2.4-tdc-ios</code>.</p>
       <table class="files" style="margin-top:4px">
         <tr><th>You fly with</th><th>Firmware zip</th><th>App</th></tr>
-        <tr><td>Android phone</td><td><code>TheDroneCommunity-firmware-1.2.3.zip</code></td><td><code>TheDroneCommunity-1.2.2.apk</code> (in <code>TheDroneCommunity-app-1.2.2.zip</code>)</td></tr>
-        <tr><td>iPhone or iPad</td><td><code>TheDroneCommunity-firmware-1.2.3-ios.zip</code></td><td>ESP-Drone by Espressif, free on the App Store</td></tr>
-        <tr><td>Mixed group</td><td><code>TheDroneCommunity-firmware-1.2.3-ios.zip</code></td><td>Either app (the Android app works with the iOS build too)</td></tr>
+        <tr><td>Android phone</td><td><code>TheDroneCommunity-firmware-1.2.4.zip</code></td><td><code>TheDroneCommunity-1.2.4.apk</code></td></tr>
+        <tr><td>iPhone or iPad</td><td><code>TheDroneCommunity-firmware-1.2.4-ios.zip</code></td><td>ESP-Drone by Espressif, free on the App Store</td></tr>
+        <tr><td>Mixed group</td><td><code>TheDroneCommunity-firmware-1.2.4-ios.zip</code></td><td>Either app (the Android app works with the iOS build too)</td></tr>
       </table>
       <table style="margin-top:6px">
         <tr><th>In each firmware zip</th><th>Use it for</th></tr>
@@ -111,7 +111,7 @@ footer .rt { text-align: right; }
       </ol>
       <h3>By hand, any system</h3>
 <pre>python3 -m pip install esptool
-python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheDroneCommunity-firmware-1.2.3-full.bin</pre>
+python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheDroneCommunity-firmware-1.2.4-full.bin</pre>
       <p>Use the <code>-ios</code> file name for the iOS build.</p>
       <p><b>XIAO not found?</b> Hold <b>B</b> (BOOT) while plugging in the cable, then run it again.</p>
       <p><b>Check:</b> unplug USB, connect the battery, wait 5&nbsp;s. Wi-Fi <code>ESP-DRONE_</code> + 12 characters appears, password <code>12345678</code>.</p>
@@ -123,7 +123,7 @@ python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheD
       <h2><i>3</i>Update over Wi-Fi</h2>
       <p>Any drone already on our firmware (1.1.0 or later) updates from the Android app, no cable.</p>
       <ol style="margin-top:4px">
-        <li>Copy <code>ESPDrone-1.2.3-update.bin</code> (or the <code>-ios</code> one) to the phone.</li>
+        <li>Copy <code>ESPDrone-1.2.4-update.bin</code> (or the <code>-ios</code> one) to the phone.</li>
         <li>Charge the battery, power the drone from it, put it on the ground.</li>
         <li>Join the drone's Wi-Fi and tap <b>Connect</b> in the app. Don't arm.</li>
         <li>Gear &gt; <b>Drone settings</b> &gt; <b>Firmware update</b> &gt; <b>Choose firmware file…</b></li>
@@ -132,7 +132,7 @@ python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheD
       </ol>
       <p class="note">Works on the iOS build too: it disarms for the update while it sits on the ground with the throttle at zero, and waits 15&nbsp;s before arming itself again.</p>
       <h3 style="margin-top:10px">Which version is on a drone?</h3>
-      <p>Drone settings &gt; Firmware update shows <b>Installed:</b>. Over USB the boot log prints <code>drone API … (fw 1.2.3-tdc)</code>.</p>
+      <p>Drone settings &gt; Firmware update shows <b>Installed:</b>. Over USB the boot log prints <code>drone API … (fw 1.2.4-tdc)</code>.</p>
       <h3 style="margin-top:10px">Needs updating</h3>
       <p>Drones on <b>1.2.2 or older</b> spin steadily in flight (yaw fix is in 1.2.3) and may refuse clone IMU chips (fixed in 1.2.2). Update every drone before flying it.</p>
       <h3 style="margin-top:10px">Rename a drone's Wi-Fi</h3>
@@ -141,7 +141,7 @@ python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheD
   </div>
 
   <footer>
-    <span><b>Downloads:</b> <code>TheDroneCommunity-firmware-1.2.3.zip</code> · <code>-1.2.3-ios.zip</code> · <code>TheDroneCommunity-app-1.2.2.zip</code><br>Firmware: ESP-Drone / Crazyflie, GPL-3.0 · App: ESP-Drone-Android, GPL-2.0+ · Font: Sora, OFL</span>
+    <span><b>Downloads:</b> <code>TheDroneCommunity-firmware-1.2.4.zip</code> · <code>-1.2.4-ios.zip</code> · <code>TheDroneCommunity-1.2.4.apk</code><br>Firmware: ESP-Drone / Crazyflie, GPL-3.0 · App: ESP-Drone-Android, GPL-2.0+ · Font: Sora, OFL</span>
     <span class="rt">Help: The Drone Community group<br>thedronecommunity.com · Page 1 of 2</span>
   </footer>
 </section>
@@ -160,7 +160,7 @@ python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheD
       <h2><i>4</i>Android app<span class="tag dark">Android 8+</span></h2>
       <h3>Install</h3>
       <ol>
-        <li>Copy <code>TheDroneCommunity-1.2.2.apk</code> to the phone.</li>
+        <li>Copy <code>TheDroneCommunity-1.2.4.apk</code> to the phone.</li>
         <li>Tap it; allow <b>Install unknown apps</b> if asked; tap <b>Install</b> or <b>Update</b>.</li>
       </ol>
       <h3>Connect</h3>
@@ -181,10 +181,10 @@ python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheD
 
     <div class="panel" style="height:268px">
       <h2><i>5</i>iPhone and iPad<span class="tag">iOS build</span></h2>
-      <p>iPhones use Espressif's free <b>ESP-Drone</b> app (App Store, iOS 10+) with the <b>1.2.3-ios</b> firmware.</p>
+      <p>iPhones use Espressif's free <b>ESP-Drone</b> app (App Store, iOS 10+) with the <b>1.2.4-ios</b> firmware.</p>
       <h3>Prepare the drone, once</h3>
       <ol>
-        <li>Flash <code>…-1.2.3-ios-full.bin</code> over USB, or send <code>ESPDrone-1.2.3-ios-update.bin</code> from the Android app.</li>
+        <li>Flash <code>…-1.2.4-ios-full.bin</code> over USB, or send <code>ESPDrone-1.2.4-ios-update.bin</code> from the Android app.</li>
       </ol>
       <h3>Connect</h3>
       <ol>
@@ -213,7 +213,7 @@ python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheD
           <tr><td><b>M4</b></td><td>Front left</td><td>D0 · GPIO 1</td><td><s class="dot ccw"></s>CCW</td></tr>
         </table>
         <ul class="check">
-          <li><b>Props</b> match the table. Firmware 1.2.3 expects M1 + M3 CW, M2 + M4 CCW.</li>
+          <li><b>Props</b> match the table. Firmware 1.2.3 and later expect M1 + M3 CW, M2 + M4 CCW.</li>
           <li><b>Motor test</b>, props off: Drone settings &gt; Motor test &gt; Test all four in turn.</li>
           <li><b>Level calibration</b>: flat table, hands off, Drone settings &gt; Level calibration &gt; Calibrate.</li>
           <li><b>First hover</b>: 30&nbsp;cm for 5&nbsp;s. It holds its heading; a tap of yaw right turns the nose right.</li>
@@ -228,11 +228,11 @@ python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheD
         <tr><th>What you see</th><th>Cause</th><th>Fix</th></tr>
         <tr><td>Computer doesn't see the XIAO</td><td>Charge-only cable, battery plugged in, USB port shut down</td><td>Data cable, unplug the battery, hold B (BOOT) while plugging in, try another port</td></tr>
         <tr><td>No <code>ESP-DRONE_</code> network</td><td>Antenna off, no power, still booting</td><td>Clip the antenna onto the XIAO, check the battery, wait 5&nbsp;s</td></tr>
-        <tr><td>App: No SoftAP connection</td><td>App older than 1.2.2 on Android 10+</td><td>Install <code>TheDroneCommunity-1.2.2.apk</code></td></tr>
-        <tr><td>Arm stays grey</td><td>Old app, or settings still downloading</td><td>Install 1.2.2; wait for the TOC toast</td></tr>
-        <tr><td>TOC fetch finished: 0, sticks dead</td><td>Old app skipped the settings download</td><td>Install 1.2.2</td></tr>
+        <tr><td>App: No SoftAP connection</td><td>App older than 1.2.2 on Android 10+</td><td>Install the latest <code>TheDroneCommunity-&lt;version&gt;.apk</code></td></tr>
+        <tr><td>Arm stays grey</td><td>Old app, or settings still downloading</td><td>Install the latest app; wait for the TOC toast</td></tr>
+        <tr><td>TOC fetch finished: 0, sticks dead</td><td>Old app skipped the settings download</td><td>Install the latest app</td></tr>
         <tr><td>Shows Armed, sticks do nothing</td><td>Drone restarted after a battery or USB swap</td><td>Disconnect, Connect, Arm again</td></tr>
-        <tr><td>Spins steadily in flight</td><td>Firmware 1.2.2 or older, or props reversed</td><td>Flash 1.2.3; check the prop table</td></tr>
+        <tr><td>Spins steadily in flight</td><td>Firmware 1.2.2 or older, or props reversed</td><td>Flash the latest firmware; check the prop table</td></tr>
         <tr><td>Slow turn, a few °/s</td><td>Normal gyro drift on clone IMU chips</td><td>Power-cycle while it sits still; correct with yaw</td></tr>
         <tr><td>Log: MPU6050 I2C [FAIL]</td><td>IMU not soldered or seated</td><td>Reflow VCC, GND, SCL, SDA on the GY-521; it won't fly until fixed</td></tr>
         <tr><td>No live video</td><td>No camera fitted, or loose ribbon</td><td>Reseat the ribbon; it flies without a camera</td></tr>

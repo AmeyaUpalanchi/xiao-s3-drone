@@ -76,7 +76,8 @@ Full details, pin map and ordering steps: [hardware/README.md](hardware/README.m
 
 You need an assembled drone, a USB-C data cable and Python 3.
 
-**1. Download** the firmware and app zips from the [latest release](../../releases).
+**1. Download** `TheDroneCommunity-firmware-<version>.zip` and `TheDroneCommunity-<version>.apk`
+from the [latest release](../../releases).
 
 **2. Flash** the drone with the battery unplugged:
 
@@ -100,11 +101,12 @@ including iPhone setup and troubleshooting.
 ### Firmware
 
 Requires [ESP-IDF v5.0.x](https://docs.espressif.com/projects/esp-idf/en/v5.0/esp32s3/get-started/).
+The target (ESP32-S3) and all board settings are already in `firmware/sdkconfig`, so there's
+no need to run `idf.py set-target`.
 
 ```bash
 cd firmware
 . ~/esp/esp-idf/export.sh
-idf.py set-target esp32s3
 idf.py build
 idf.py -p /dev/cu.usbmodem* flash monitor
 ```
@@ -120,10 +122,12 @@ Build options live in `idf.py menuconfig` under **ESPDrone Config**:
 
 ### Android app
 
-Requires Android Studio (or JDK 17 and the Android SDK).
+Open `android-app/` in Android Studio and press Run, or build from a terminal with JDK 17 and
+the Android SDK:
 
 ```bash
 cd android-app
+export ANDROID_HOME=~/Library/Android/sdk     # Linux: ~/Android/Sdk
 ./gradlew assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 
@@ -133,8 +137,16 @@ cd android-app
 tools/package-release.sh <version>
 ```
 
-Builds the firmware and app and writes `dist/TheDroneCommunity-v<version>.zip` with flash
-scripts, the over-the-air update image and the guides.
+Builds both firmware variants and the app, and writes the release files to `dist/`:
+
+| File | Contents |
+|---|---|
+| `TheDroneCommunity-firmware-<version>.zip` | Firmware for the Android app: full image, OTA image, flash scripts |
+| `TheDroneCommunity-firmware-<version>-ios.zip` | The same for the iOS build |
+| `TheDroneCommunity-<version>.apk` | Android app |
+| `TheDroneCommunity-v<version>.zip` | All of the above plus the install and quick guides |
+
+The version must match `DRONE_FW_VERSION` in `drone_api.h` and `versionName` in the app.
 
 ## Add-ons
 

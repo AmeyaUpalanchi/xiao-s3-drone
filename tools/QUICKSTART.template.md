@@ -8,6 +8,8 @@
 | `firmware/TheDroneCommunity-firmware-{{VERSION}}-full.bin` | Full drone firmware for the first install over USB |
 | `firmware/ESPDrone-{{VERSION}}-update.bin` | Firmware update to send from the app over Wi-Fi |
 | `firmware/flash-mac-linux.sh`, `firmware/flash-windows.bat` | One-step USB flashing |
+| `firmware-ios/` | The same firmware built for Espressif's ESP-Drone iPhone app (see `README-iOS.txt`) |
+| `TDC_XIAO_S3_Drone_Install_Guide.pdf` | Step-by-step install guide (2 pages) |
 
 ## 1. Flash the drone (once, over USB)
 
@@ -47,6 +49,6 @@ installing from this source the first time.
 ## Optional hardware
 
 - **XIAO ESP32-S3 Sense camera board:** live video, photos and recording in the app.
-- **VL53L1X height sensor on a Qwiic port:** the drone holds its height by itself, and a Take off button appears.
+- **VL53L1X or VL53L0X height sensor on a Qwiic port:** the drone holds its height by itself, and a Take off button appears.
 
 Default Wi-Fi: `ESP-DRONE_<id>`, password `12345678`. Change both in the app: gear, then Wi-Fi.

@@ -8,3 +8,5 @@ android-app/local.properties
 *.iml
 .DS_Store
 dist/
+firmware/build-ios/
+firmware/sdkconfig.ios

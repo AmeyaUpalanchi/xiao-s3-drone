@@ -102,7 +102,6 @@ before flying.
 ```bash
 cd firmware
 . ~/esp/esp-idf/export.sh      # ESP-IDF v5.0.x
-idf.py set-target esp32s3
 idf.py build
 idf.py -p /dev/cu.usbmodem* flash monitor
 ```

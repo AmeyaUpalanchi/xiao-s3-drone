@@ -1,10 +1,13 @@
 # Changelog
 
-## 1.2.4 (firmware) / 1.2.3 (app)
+## 1.2.4
 - Firmware: VL53L0X height sensor support on a Qwiic port (CN5/CN6): altitude hold, Take off and
   height-based landing, like the VL53L1X. Best below about 1 m; the VL53L1X reaches further
 - Firmware: the VL53L0X driver no longer reports a sensor when none is fitted
 - App: Take off and height mode also appear for a VL53L0X
+- App and firmware share one version number from 1.2.4 on
+- Release files: separate firmware zips for Android and iOS, the APK, and a combined package
+  with the install guide
 
 ## 1.2.3
 - Firmware: fixed the drone spinning (yawing) steadily in flight. The motor mix expected the
