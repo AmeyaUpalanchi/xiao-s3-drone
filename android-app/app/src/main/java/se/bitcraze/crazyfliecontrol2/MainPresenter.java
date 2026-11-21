@@ -118,7 +118,6 @@ public class MainPresenter {
                     mainActivity.showToastie("Parameters TOC fetch finished: " + paramToc.getTocSize());
                     checkForBuzzerDeck();
                     checkForNoOfRingEffects();
-                    checkForZRanger();
                     mFirmwareSafety = paramToc.getElementByCompleteName("safety.armed") != null;
                     checkForHeightSensor();
                     Log.d(LOG_TAG, "firmware safety module: " + mFirmwareSafety);
@@ -135,6 +134,11 @@ public class MainPresenter {
                 }
             }
             startSendJoystickDataThread();
+            // Arm is enabled only once setup is finished; refresh it now (it was
+            // last drawn when the link came up, before setup was done).
+            if (mainActivity != null) {
+                mainActivity.onFlightStateChanged(mFlightState);
+            }
         }
 
         @Override
@@ -198,23 +202,43 @@ public class MainPresenter {
         mCrazyflie.getParam().requestParamUpdate("deck.bcZRanger");
     }
 
+    private boolean mZRanger2Present = false;   // VL53L1X (deck.bcZRanger2)
+    private boolean mZRanger1Present = false;   // VL53L0X (deck.bcZRanger)
+
+    /** Height mode when the drone reports a VL53L1X or a VL53L0X height sensor. */
     private void checkForHeightSensor() {
-        if (mParamToc == null || mParamToc.getElementByCompleteName("deck.bcZRanger2") == null) {
+        mZRanger2Present = false;
+        mZRanger1Present = false;
+        if (mParamToc == null) {
             return;
         }
-        mCrazyflie.getParam().addParamListener(new ParamListener("deck", "bcZRanger2") {
+        watchHeightSensor("bcZRanger2");
+        watchHeightSensor("bcZRanger");
+    }
+
+    private void watchHeightSensor(final String param) {
+        final String full = "deck." + param;
+        if (mParamToc.getElementByCompleteName(full) == null) {
+            return;
+        }
+        mCrazyflie.getParam().addParamListener(new ParamListener("deck", param) {
             @Override
             public void updated(String name, Number value) {
                 boolean present = mCrazyflie != null
-                        && mCrazyflie.getParam().getValue("deck.bcZRanger2").intValue() == 1;
-                mHeightMode = present && mFirmwareSafety;
+                        && mCrazyflie.getParam().getValue(full).intValue() == 1;
+                if ("bcZRanger2".equals(param)) {
+                    mZRanger2Present = present;
+                } else {
+                    mZRanger1Present = present;
+                }
+                mHeightMode = (mZRanger2Present || mZRanger1Present) && mFirmwareSafety;
                 if (mainActivity != null) {
                     mainActivity.onHeightModeChanged(mHeightMode);
                 }
-                Log.d(LOG_TAG, "height sensor: " + present);
+                Log.d(LOG_TAG, full + ": " + present);
             }
         });
-        mCrazyflie.getParam().requestParamUpdate("deck.bcZRanger2");
+        mCrazyflie.getParam().requestParamUpdate(full);
     }
 
     private void checkForNoOfRingEffects() {

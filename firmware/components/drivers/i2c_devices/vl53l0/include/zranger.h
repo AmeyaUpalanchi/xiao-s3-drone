@@ -29,6 +29,8 @@
 void zRangerInit(void);//DeckInfo* info);
 
 bool zRangerTest(void);
+/** True when a VL53L0X answers at 0x29 (read-only ID check). */
+bool zRangerProbe(void);
 void zRangerTask(void* arg);
 
 bool zRangerReadRange(zDistance_t* zrange, const uint32_t tick);

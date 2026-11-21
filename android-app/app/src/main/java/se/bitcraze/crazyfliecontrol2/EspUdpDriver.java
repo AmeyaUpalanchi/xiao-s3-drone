@@ -1,6 +1,9 @@
 package se.bitcraze.crazyfliecontrol2;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 
@@ -38,8 +41,7 @@ public class EspUdpDriver extends CrtpDriver {
     private Observer<String> mObserver = new Observer<String>(){
         @Override
         public void onChanged(String s) {
-            int networkId = mWifiManager.getConnectionInfo().getNetworkId();
-            if (networkId == -1) {
+            if (!isOnWifi()) {
                 disconnect();
                 notifyConnectionLost("No SoftAP connection");
             } else {
@@ -68,6 +70,25 @@ public class EspUdpDriver extends CrtpDriver {
             }
         }
     };
+
+    /**
+     * True when the phone has any Wi-Fi network up. Android 10+ hides the Wi-Fi
+     * network ID (getNetworkId() == -1) from apps without location permission, so
+     * that check wrongly reported "No SoftAP connection" on a connected phone.
+     */
+    @SuppressWarnings("deprecation")
+    private boolean isOnWifi() {
+        ConnectivityManager cm = mActivity.getApplicationContext().getSystemService(ConnectivityManager.class);
+        if (cm != null) {
+            for (Network n : cm.getAllNetworks()) {
+                NetworkCapabilities caps = cm.getNetworkCapabilities(n);
+                if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    return true;
+                }
+            }
+        }
+        return mWifiManager.getConnectionInfo().getNetworkId() != -1;
+    }
 
     public EspUdpDriver(EspActivity activity) {
         mActivity = activity;

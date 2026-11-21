@@ -88,10 +88,18 @@ void powerDistribution(const control_t *control)
   #ifdef QUAD_FORMATION_X
     int16_t r = control->roll / 2.0f;
     int16_t p = control->pitch / 2.0f;
-    motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw);
-    motorPower.m2 = limitThrust(control->thrust - r - p - control->yaw);
-    motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
-    motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
+#ifdef CONFIG_XIAO_ESP32S3_BOARD
+    /* XIAO S3 drone props: M1 + M3 CW, M2 + M4 CCW (quick guide). The stock mix
+     * below assumes the opposite, which turned the yaw loop into positive
+     * feedback and made the drone spin steadily in flight. */
+    int32_t y = -(int32_t)control->yaw;
+#else
+    int32_t y = control->yaw;
+#endif
+    motorPower.m1 = limitThrust(control->thrust - r + p + y);
+    motorPower.m2 = limitThrust(control->thrust - r - p - y);
+    motorPower.m3 =  limitThrust(control->thrust + r - p + y);
+    motorPower.m4 =  limitThrust(control->thrust + r + p - y);
   #else // QUAD_FORMATION_NORMAL
     motorPower.m1 = limitThrust(control->thrust + control->pitch +
                                control->yaw);

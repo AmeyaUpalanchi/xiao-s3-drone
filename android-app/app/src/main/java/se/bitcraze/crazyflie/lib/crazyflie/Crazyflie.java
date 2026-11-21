@@ -312,7 +312,10 @@ public class Crazyflie {
             }
         };
         //mLog.refreshToc(self._log_toc_updated_cb, self._toc_cache);
-        if (mDriver instanceof RadioDriver) {
+        // ESP-Drone Wi-Fi link: fetch the TOCs too. Without the param TOC the app can't
+        // find safety.armed, so Arm never reached the drone and the sticks did nothing.
+        if (mDriver instanceof RadioDriver
+                || mDriver instanceof se.bitcraze.crazyfliecontrol2.EspUdpDriver) {
             mLogg.refreshToc(loggTocFetchFinishedListener, mTocCache);
         } else {
             //TODO: shortcut for BLELink

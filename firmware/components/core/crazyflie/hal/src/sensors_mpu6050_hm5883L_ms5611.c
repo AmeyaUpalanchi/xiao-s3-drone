@@ -86,6 +86,7 @@
 // #define SENSORS_ENABLE_PRESSURE_MS5611
 //#define SENSORS_ENABLE_RANGE_VL53L0X
 #define SENSORS_ENABLE_RANGE_VL53L1X
+#define SENSORS_ENABLE_RANGE_VL53L0X   // XIAO S3 drone: either ToF sensor on a Qwiic port
 #define SENSORS_ENABLE_FLOW_PMW3901
 
 #define SENSORS_GYRO_FS_CFG MPU6050_GYRO_FS_2000
@@ -551,31 +552,37 @@ static void sensorsDeviceInit(void)
 
 #endif
 
-#ifdef SENSORS_ENABLE_RANGE_VL53L1X
-    zRanger2Init();
-
-    if (zRanger2Test() == true) {
-        isVl53l1xPresent = true;
-        DEBUG_PRINTI("VL53L1X I2C connection [OK].\n");
-    } else {
-        //TODO: Should sensor test fail hard if no connection
-        DEBUG_PRINTW("VL53L1X I2C connection [FAIL].\n");
-    }
-
-#endif
-
 #ifdef SENSORS_ENABLE_RANGE_VL53L0X
-    zRangerInit();
-
-    if (zRangerTest() == true) {
-        isVl53l0xPresent = true;
-        DEBUG_PRINTI("VL53L0X I2C connection [OK].\n");
-    } else {
-        //TODO: Should sensor test fail hard if no connection
-        DEBUG_PRINTW("VL53L0X I2C connection [FAIL].\n");
+    /* Both ToF chips answer at 0x29. Look for the VL53L0X first with a
+     * read-only ID check; only if it isn't there, try the VL53L1X. */
+    if (zRangerProbe()) {
+        zRangerInit();
+        if (zRangerTest() == true) {
+            isVl53l0xPresent = true;
+            DEBUG_PRINTI("VL53L0X I2C connection [OK].\n");
+        } else {
+            DEBUG_PRINTW("VL53L0X I2C connection [FAIL].\n");
+        }
     }
-
 #endif
+
+#ifdef SENSORS_ENABLE_RANGE_VL53L1X
+#ifdef SENSORS_ENABLE_RANGE_VL53L0X
+    if (!isVl53l0xPresent)
+#endif
+    {
+        zRanger2Init();
+
+        if (zRanger2Test() == true) {
+            isVl53l1xPresent = true;
+            DEBUG_PRINTI("VL53L1X I2C connection [OK].\n");
+        } else {
+            DEBUG_PRINTW("VL53L1X I2C connection [FAIL].\n");
+        }
+    }
+#endif
+
+
 
 #ifdef SENSORS_ENABLE_FLOW_PMW3901
     flowdeck2Init();
@@ -593,9 +600,13 @@ static void sensorsDeviceInit(void)
 #ifdef SENSORS_ENABLE_RANGE_VL53L1X
     // Height sensor without optical flow (VL53L1X on a Qwiic port):
     // fly in altitude-hold mode - throttle stick centre holds the height.
-    if (isVl53l1xPresent && !isPmw3901Present) {
+    bool heightSensor = isVl53l1xPresent;
+#ifdef SENSORS_ENABLE_RANGE_VL53L0X
+    heightSensor = heightSensor || isVl53l0xPresent;
+#endif
+    if (heightSensor && !isPmw3901Present) {
         setCommandermode(ALTHOLD_MODE);
-        DEBUG_PRINTI("VL53L1X found: altitude hold enabled\n");
+        DEBUG_PRINTI("%s found: altitude hold enabled\n", isVl53l1xPresent ? "VL53L1X" : "VL53L0X");
     }
 #endif
 

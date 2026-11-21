@@ -26,8 +26,10 @@
 #include "pm_esplane.h"
 #include "range.h"
 #include "zranger2.h"
+#include "zranger.h"
 #include "param.h"
 #include "log.h"
+#include "sdkconfig.h"
 #define DEBUG_MODULE "SAFETY"
 #include "debug_cf.h"
 
@@ -57,10 +59,14 @@ static uint32_t groundSinceTick = 0;
 static float outputThrust = 0.0f;
 static float heightM = -1.0f;
 static uint32_t idleSinceTick = 0;
+#ifdef CONFIG_DRONE_AUTO_ARM
+static volatile uint32_t autoArmBlockedUntil = 0;   // web tool in use: don't re-arm yet
+#define TOOL_HOLD_MS            15000
+#endif
 
 static bool heightSensorPresent(void)
 {
-  return zRanger2Test();
+  return zRanger2Test() || zRangerTest();   // VL53L1X or VL53L0X
 }
 
 float flightSafetyGetHeight(void)
@@ -135,6 +141,16 @@ void flightSafetyUpdate(setpoint_t *sp)
     killRequest = 0;
     disarm("kill switch");
   }
+
+#ifdef CONFIG_DRONE_AUTO_ARM
+  // iOS build: the ESP-Drone App Store app never sends safety.armed. Arm while
+  // an app is streaming setpoints with the throttle at zero; every disarm rule
+  // below (app lost, idle on the ground, landed) still applies.
+  if (state == SAFETY_DISARMED && !linkLost && sp->thrust <= 0.0f
+      && (int32_t)(xTaskGetTickCount() - autoArmBlockedUntil) >= 0) {
+    armRequest = 1;
+  }
+#endif
 
   // 2. Arm / disarm requests.
   if (state == SAFETY_DISARMED) {
@@ -255,6 +271,23 @@ void flightSafetyUpdate(setpoint_t *sp)
 bool flightSafetyMotorsAllowed(void)
 {
   return state != SAFETY_DISARMED && state != SAFETY_SERVICE;
+}
+
+bool flightSafetyDisarmForTools(void)
+{
+  if (state == SAFETY_DISARMED) {
+    return true;
+  }
+#ifdef CONFIG_DRONE_AUTO_ARM
+  // iOS build arms itself whenever an app is connected; a web tool (motor test,
+  // level, Wi-Fi, firmware update) may still run while it sits idle on the ground.
+  if (state == SAFETY_ARMED && outputThrust <= 0.0f && pilotThrust < MIN_FLYING_THRUST) {
+    autoArmBlockedUntil = xTaskGetTickCount() + M2T(TOOL_HOLD_MS);
+    disarm("web tool");
+    return true;
+  }
+#endif
+  return false;
 }
 
 bool flightSafetyServiceActive(void)

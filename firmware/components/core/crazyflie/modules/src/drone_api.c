@@ -71,7 +71,7 @@ static esp_err_t send_error(httpd_req_t *req, const char *status, const char *ms
 
 static bool isDisarmed(void)
 {
-    return flightSafetyGetState() == SAFETY_DISARMED;
+    return flightSafetyDisarmForTools();
 }
 
 static void restartCb(void *arg)

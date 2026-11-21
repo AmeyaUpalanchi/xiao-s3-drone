@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.2.4 (firmware) / 1.2.3 (app)
+- Firmware: VL53L0X height sensor support on a Qwiic port (CN5/CN6): altitude hold, Take off and
+  height-based landing, like the VL53L1X. Best below about 1 m; the VL53L1X reaches further
+- Firmware: the VL53L0X driver no longer reports a sensor when none is fitted
+- App: Take off and height mode also appear for a VL53L0X
+
+## 1.2.3
+- Firmware: fixed the drone spinning (yawing) steadily in flight. The motor mix expected the
+  props the other way round from the XIAO S3 drone build (M1 + M3 CW, M2 + M4 CCW), so the yaw
+  control pushed the wrong way
+- Firmware: separate iOS build (1.2.3-ios) for Espressif's ESP-Drone app on the App Store. That app
+  has no Arm button, so this build arms by itself while the app is connected with the throttle at zero
+
+## 1.2.2
+- App: Arm now reaches the drone over Wi-Fi. The app skipped downloading the drone's parameter
+  list on the Wi-Fi link, so it never found safety.armed and the sticks did nothing
+- App: the Arm button is enabled as soon as the drone link is fully set up
+- App: Connect no longer fails with "No SoftAP connection" on Android 10+ phones that are on the
+  drone's Wi-Fi (Android hides the Wi-Fi network ID from apps without location permission)
+- Firmware: works with GY-521 modules that carry an MPU6500-family chip (WHO_AM_I 0x70, 0x71, 0x73,
+  0x74, 0x78) as well as a genuine MPU-6050 (0x68). These were rejected before ("MPU6050 I2C
+  connection [FAIL]"), so the drone refused to fly
+- Firmware: power-on IMU self-test uses limits that suit those chips (their response is larger)
+- Firmware: optional motor auto test build (menuconfig, off by default): spins M1..M4 one by one
+  on battery power, motor N = N pulses; never spins while a computer is on USB
+
 ## 1.2.1
 - App: Connect now says "Searching…" while Android looks for the drone, gives up after 20 s instead of 45 s,
   and shows a "No drone found" dialog with what to check, Try again and Wi-Fi settings

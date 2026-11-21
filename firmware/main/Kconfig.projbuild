@@ -89,6 +89,26 @@ menu "ESPDrone Config"
                 USB-C console. Wi-Fi, the app and the motors are never started.
                 Turn this off again before flying.
 
+        config DRONE_MOTOR_AUTO_TEST
+            bool "Motor auto test (spins M1..M4 at power-up, does not fly)"
+            default n
+            depends on !DRONE_IMU_BENCH_TEST
+            help
+                Replaces the flight firmware with a motor test that runs by itself:
+                5 s after power-up, motor N gives N short pulses at 20 % (M1 = 1,
+                M2 = 2, M3 = 3, M4 = 4), three rounds, then all motors stay off.
+                No Wi-Fi or app needed. PROPS OFF. Turn this off again before flying.
+
+        config DRONE_AUTO_ARM
+            bool "iOS build: arm automatically (for the ESP-Drone app on the App Store)"
+            default n
+            help
+                Espressif's ESP-Drone iOS app has no Arm button. With this on, the drone
+                arms by itself while an app is connected and the throttle is at zero, so
+                raising the throttle spins the motors straight away. Auto-land, failsafe
+                landing, low-battery landing and the idle / app-lost disarm still work.
+                The firmware version gets an "-ios" suffix.
+
         config DRONE_DEBUG_PRINTS
             bool "Print attitude, commands and motor values to the console (10 Hz)"
             default n

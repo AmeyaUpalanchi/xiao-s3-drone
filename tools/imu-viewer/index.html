@@ -358,7 +358,7 @@ function renderSteps() {
       '</span><span class="t">' + s.t + '</span><span class="e">' + s.e + '</span><span class="r">' + (r ? r.text : '') + '</span></li>';
   }).join('');
   const s = STEPS[T.i];
-  if (!s) { $('nowT').textContent = 'Done'; $('nowH').textContent = 'Results are saved for Claude. Start over to repeat.'; return; }
+  if (!s) { $('nowT').textContent = 'Done'; $('nowH').textContent = 'Results are saved. Start over to repeat.'; return; }
   $('nowT').textContent = 'Step ' + (T.i + 1) + ': ' + s.t;
   $('nowH').textContent = (T.note ? T.note + ' ' : '') + (T.phase === 'needFlat' ? 'First put it back flat and let go.' : s.h);
 }

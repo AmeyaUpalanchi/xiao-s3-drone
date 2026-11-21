@@ -28,6 +28,7 @@
  ===============================================
  */
 
+#include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -40,6 +41,7 @@
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
+static uint8_t whoAmI = 0x68;   /* set by mpu6050TestConnection() */
 static uint8_t buffer[14];
 static bool isInit;
 
@@ -77,7 +79,20 @@ bool mpu6050Test(void)
  */
 bool mpu6050TestConnection()
 {
-    return mpu6050GetDeviceID() == 0b110100;
+    /* Genuine MPU6050 answers 0x68. Many GY-521 modules carry an MPU6500-family
+     * chip (0x70 MPU6500, 0x71 MPU9250, 0x73 MPU9255, 0x74 MPU6515, 0x78 clone)
+     * whose accel/gyro registers used here are the same, so accept those too. */
+    uint8_t id = 0;
+    if (!i2cdevReadByte(I2Cx, devAddr, MPU6050_RA_WHO_AM_I, &id)) {
+        return false;
+    }
+    whoAmI = id;
+    switch (id) {
+    case 0x68: case 0x70: case 0x71: case 0x73: case 0x74: case 0x78:
+        return true;
+    default:
+        return false;
+    }
 }
 
 /** Do a MPU6050 self test.
@@ -160,7 +175,24 @@ bool mpu6050SelfTest()
     ayfDiff = ayfTst - ayf;
     azfDiff = azfTst - azf;
 
-    // Check result
+    if (whoAmI != 0x68) {
+        /* MPU6500-family chip: its self-test response is larger than an
+         * MPU6050's (gyro ~150 deg/s measured on a 0x70 GY-521) and the signs
+         * may differ, so check that each axis clearly responds, by magnitude. */
+        const float gLow = 10.0f, gHigh = 400.0f, aLow = 0.15f, aHigh = 2.0f;
+        bool ok = mpu6050EvaluateSelfTest(gLow, gHigh, fabsf(gxfDiff), "gyro X") &
+                  mpu6050EvaluateSelfTest(gLow, gHigh, fabsf(gyfDiff), "gyro Y") &
+                  mpu6050EvaluateSelfTest(gLow, gHigh, fabsf(gzfDiff), "gyro Z") &
+                  mpu6050EvaluateSelfTest(aLow, aHigh, fabsf(axfDiff), "acc X") &
+                  mpu6050EvaluateSelfTest(aLow, aHigh, fabsf(ayfDiff), "acc Y") &
+                  mpu6050EvaluateSelfTest(aLow, aHigh, fabsf(azfDiff), "acc Z");
+        DEBUG_PRINTI("Self test (WHO_AM_I 0x%02X) %s: gyro %.1f %.1f %.1f deg/s, acc %.2f %.2f %.2f g\n",
+                     whoAmI, ok ? "[OK]" : "[FAIL]", (double)gxfDiff, (double)gyfDiff,
+                     (double)gzfDiff, (double)axfDiff, (double)ayfDiff, (double)azfDiff);
+        return ok;
+    }
+
+    // Check result (genuine MPU6050)
     if (mpu6050EvaluateSelfTest(MPU6050_ST_GYRO_LOW, MPU6050_ST_GYRO_HIGH, gxfDiff, "gyro X") &&
             mpu6050EvaluateSelfTest(-MPU6050_ST_GYRO_HIGH, -MPU6050_ST_GYRO_LOW, gyfDiff, "gyro Y") &&
             mpu6050EvaluateSelfTest(MPU6050_ST_GYRO_LOW, MPU6050_ST_GYRO_HIGH, gzfDiff, "gyro Z") &&

@@ -11,8 +11,8 @@ android {
         applicationId = "com.thedronecommunity.drone"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.2.1"
+        versionCode = 25
+        versionName = "1.2.3"
     }
 
     buildTypes {

@@ -37,9 +37,16 @@
 #ifdef CONFIG_DRONE_IMU_BENCH_TEST
 #include "imu_bench_test.h"
 #endif
+#ifdef CONFIG_DRONE_MOTOR_AUTO_TEST
+#include "motor_auto_test.h"
+#endif
 
 void app_main()
 {
+#ifdef CONFIG_DRONE_MOTOR_AUTO_TEST
+    /* Motor auto test: M1..M4 one by one, then motors off. Never returns. */
+    motorAutoTestRun();
+#endif
 #ifdef CONFIG_DRONE_IMU_BENCH_TEST
     /* Bench test: motor pins LOW first, then IMU attitude printing. Never returns. */
     imuBenchHoldMotorsLow();

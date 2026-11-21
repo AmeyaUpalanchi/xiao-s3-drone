@@ -104,16 +104,16 @@ int16_t zRangerMeasurementAndRestart()
 	return 0;
 }
 
-static int16_t zRangerGetMeasurementAndRestart(VL53L0xDev *dev)
+/* XIAO S3 drone: the VL53L0X sits on a Qwiic port (CN5/CN6), on the same I2C
+ * bus as the MPU-6050 (I2C1_DEV = sensorsBus). Only start it when the chip
+ * really answers with the VL53L0X model ID, so nothing runs (and deck.bcZRanger
+ * stays 0) when no sensor is fitted. */
+bool zRangerProbe(void)
 {
-
-	int16_t range;
-	while (dataready == 0)
-	{
-		vTaskDelay(M2T(20));
-	}
-	dataready = 0;
-	return range = range1;
+  dev.I2Cx = I2C1_DEV;
+  dev.devAddr = VL53L0X_DEFAULT_ADDRESS;
+  i2cdevInit(dev.I2Cx);
+  return vl53l0xGetModelID(&dev) == VL53L0X_IDENTIFICATION_MODEL_ID;
 }
 
 void zRangerInit(void)
@@ -121,11 +121,11 @@ void zRangerInit(void)
   if (isInit)
     return;
 
-  dev.I2Cx = 0;
+  dev.I2Cx = I2C1_DEV;
   dev.devAddr = VL53L0X_DEFAULT_ADDRESS;
   i2cdevInit(dev.I2Cx);
 
-  dev.io_timeout = 0;
+  dev.io_timeout = 100;          // ms; never block the task if the sensor stops answering
   dev.did_timeout = 0;
   dev.timeout_start_ms = 0;
   dev.stop_variable = 0;
@@ -134,35 +134,28 @@ void zRangerInit(void)
 
   vTaskDelay(M2T(20));
 
-  uint16_t wordData;
-  wordData = vl53l0xGetModelID(&dev);
-  DEBUG_PRINTI( "VL53L0X: %02X\n\r", wordData);
-
-  if(wordData == VL53L0X_ID)
-	{
-    DEBUG_PRINT( "VL53L0X I2C commection [OK].\n");
+  uint16_t id = vl53l0xGetModelID(&dev);
+  if (id != VL53L0X_IDENTIFICATION_MODEL_ID) {
+    DEBUG_PRINTW("VL53L0X not found (id 0x%04X)\n", id);
+    return;
   }
-
-  vl53l0xInit(&dev, I2C1_DEV, true);
-
-  xTaskCreate(zRangerTask, ZRANGER_TASK_NAME, ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
+  if (!vl53l0xInit(&dev, I2C1_DEV, true)) {
+    DEBUG_PRINTW("VL53L0X init failed\n");
+    return;
+  }
 
   // pre-compute constant in the measurement noise model for kalman
   expCoeff = logf(expStdB / expStdA) / (expPointB - expPointA);
 
   isInit = true;
+  xTaskCreate(zRangerTask, ZRANGER_TASK_NAME, ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
 }
 
+/* Cheap: called from the flight loop, so no I2C traffic here (the ID was
+ * checked in zRangerInit). */
 bool zRangerTest(void)
 {
-  bool testStatus;
-
-  if (!isInit)
-    return false;
-
-  testStatus  = vl53l0xTestConnection(&dev);
-
-  return testStatus;
+  return isInit;
 }
 
 void zRangerTask(void* arg)
@@ -177,9 +170,18 @@ void zRangerTask(void* arg)
   xLastWakeTime = xTaskGetTickCount();
 
   while (1) {
-    vTaskDelayUntil(&xLastWakeTime, M2T(dev.measurement_timing_budget_ms));
+    vTaskDelayUntil(&xLastWakeTime, M2T(35));   // long-range mode: ~33 ms per reading
 
-    range_last = zRangerGetMeasurementAndRestart(&dev);
+    uint16_t mm = vl53l0xReadRangeContinuousMillimeters(&dev);
+    if (dev.did_timeout || mm == 0) {   // no answer this time
+      dev.did_timeout = 0;
+      continue;
+    }
+    if (mm >= 8190) {                    // nothing in range (too high, or no floor)
+      rangeSet(rangeDown, 8.19f);
+      continue;
+    }
+    range_last = mm;
     rangeSet(rangeDown, range_last / 1000.0f);
     DEBUG_PRINTD("ZRANGE = %f",range_last/ 1000.0f);
 

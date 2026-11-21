@@ -1,0 +1,248 @@
+<!doctype html><html><head><meta charset="utf-8"><title>XIAO S3 Drone Install Guide</title>
+<style>
+@font-face { font-family: Sora; src: url(../quick-guide/fonts/Sora-Regular.ttf); font-weight: 400; }
+@font-face { font-family: Sora; src: url(../quick-guide/fonts/Sora-SemiBold.ttf); font-weight: 600; }
+@font-face { font-family: Sora; src: url(../quick-guide/fonts/Sora-Bold.ttf); font-weight: 700; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #fff; }
+body { font-family: Sora, sans-serif; color: #1c1c1c; -webkit-font-smoothing: antialiased; }
+.page { position: relative; width: 596px; height: 843px; overflow: hidden; background: #fff; }
+header { position: absolute; left: 30px; right: 30px; top: 26px; display: flex; justify-content: space-between;
+  align-items: flex-end; padding-bottom: 7px; border-bottom: 3px solid #1c1c1c; }
+h1 { font-size: 25px; font-weight: 700; letter-spacing: -0.6px; line-height: 1; }
+h1 em { font-style: normal; color: #E2572B; }
+.sub { margin-top: 5px; font-size: 8.4px; color: #4a4a4a; letter-spacing: 0.1px; }
+.org { font-size: 7.6px; color: #4a4a4a; text-align: right; line-height: 1.45; }
+.org b { color: #1c1c1c; font-weight: 600; }
+.panel { border: 0.8px solid #d9d9d9; border-radius: 7px; padding: 9px 11px 8px; background: #fff; }
+.panel.warm { background: #FDF2EC; border-color: #E7835E; }
+h2 { font-size: 10.2px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 5px; }
+h2 i { font-style: normal; color: #E2572B; margin-right: 4px; }
+h3 { font-size: 7.9px; font-weight: 700; margin: 5px 0 2px; }
+h3:first-of-type { margin-top: 2px; }
+p, li, td, th { font-size: 7.4px; line-height: 1.48; }
+p + p { margin-top: 3px; }
+b { font-weight: 700; }
+code { font-family: Menlo, monospace; font-size: 6.6px; background: #f1f1f1; border-radius: 2px; padding: 0.5px 2px; }
+pre { font-family: Menlo, monospace; font-size: 6.3px; line-height: 1.5; background: #f4f4f4; border-radius: 4px;
+  padding: 4px 6px; margin: 3px 0; white-space: pre-wrap; word-break: break-all; }
+ol, ul { padding-left: 12px; }
+li { margin-bottom: 1.4px; }
+ul.check { list-style: none; padding-left: 0; }
+ul.check li { padding-left: 13px; position: relative; }
+ul.check li::before { content: ""; position: absolute; left: 0; top: 2px; width: 7px; height: 7px;
+  border: 0.9px solid #1c1c1c; border-radius: 1.5px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { vertical-align: top; padding: 2.2px 3px; border-bottom: 0.6px solid #e2e2e2; text-align: left; }
+th { font-weight: 700; border-bottom: 0.9px solid #1c1c1c; }
+.files td:first-child { width: 72px; font-weight: 700; }
+.motors td, .motors th { text-align: center; }
+.motors td:first-child, .motors th:first-child { text-align: left; }
+s.dot { display: inline-block; width: 6.5px; height: 6.5px; border-radius: 50%; margin-right: 3px; vertical-align: -0.3px; }
+.cw { background: #2a4fa8; } .ccw { background: #E2572B; }
+.trouble th:first-child, .trouble td:first-child { width: 128px; }
+.trouble td:first-child { font-weight: 700; }
+.tag { display: inline-block; font-size: 6.4px; font-weight: 700; color: #fff; background: #E2572B; border-radius: 3px;
+  padding: 0.5px 4px; margin-left: 4px; vertical-align: 1px; letter-spacing: 0.2px; }
+.tag.dark { background: #1c1c1c; }
+.note { margin-top: 4px; font-size: 7px; color: #4a4a4a; }
+.grid { position: absolute; left: 30px; right: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.full { grid-column: 1 / 3; }
+.safety ol { columns: 2; column-gap: 18px; }
+.safety li { break-inside: avoid; }
+footer { position: absolute; left: 30px; right: 30px; bottom: 22px; border-top: 0.8px solid #cfcfcf; padding-top: 6px;
+  display: flex; justify-content: space-between; font-size: 6.9px; color: #555; line-height: 1.45; }
+footer .rt { text-align: right; }
+</style></head><body>
+
+<section class="page">
+  <header>
+    <div>
+      <h1>XIAO S3 Drone <em>Install Guide</em></h1>
+      <p class="sub">Put the firmware on the drone, then fly it from an Android phone or an iPhone</p>
+    </div>
+    <div class="org"><b>The Drone Community</b><br>Firmware 1.2.3 · App 1.2.2 · Nov 2026</div>
+  </header>
+
+  <div class="grid" style="top:88px">
+    <div class="panel warm full safety">
+      <h2><i>!</i>Safety first</h2>
+      <ol>
+        <li><b>Never connect USB and the battery at the same time.</b> The battery feeds the USB power line on these boards: the pack gets charged from the computer and the USB port can shut down. Flash on USB only, fly on the battery only.</li>
+        <li><b>Props off</b> for flashing, the motor test and any bench test.</li>
+        <li><b>On the iOS build the props are live whenever an app is connected.</b> It arms itself, so raising the throttle spins the motors straight away.</li>
+        <li><b>First flights low and over a soft surface</b>, everyone standing behind the pilot.</li>
+      </ol>
+    </div>
+
+    <div class="panel full">
+      <h2><i>1</i>Which files to use</h2>
+      <p>Pick the firmware by the phone that flies the drone. The drone reports its build as <code>fw 1.2.3-tdc</code> or <code>fw 1.2.3-tdc-ios</code>.</p>
+      <table class="files" style="margin-top:4px">
+        <tr><th>You fly with</th><th>Firmware zip</th><th>App</th></tr>
+        <tr><td>Android phone</td><td><code>TheDroneCommunity-firmware-1.2.3.zip</code></td><td><code>TheDroneCommunity-1.2.2.apk</code> (in <code>TheDroneCommunity-app-1.2.2.zip</code>)</td></tr>
+        <tr><td>iPhone or iPad</td><td><code>TheDroneCommunity-firmware-1.2.3-ios.zip</code></td><td>ESP-Drone by Espressif, free on the App Store</td></tr>
+        <tr><td>Mixed group</td><td><code>TheDroneCommunity-firmware-1.2.3-ios.zip</code></td><td>Either app (the Android app works with the iOS build too)</td></tr>
+      </table>
+      <table style="margin-top:6px">
+        <tr><th>In each firmware zip</th><th>Use it for</th></tr>
+        <tr><td><code>TheDroneCommunity-firmware-&lt;version&gt;-full.bin</code></td><td>First install over USB, written at address 0x0</td></tr>
+        <tr><td><code>ESPDrone-&lt;version&gt;-update.bin</code></td><td>Updating a drone over Wi-Fi from the Android app</td></tr>
+        <tr><td><code>flash-mac-linux.sh</code> · <code>flash-windows.bat</code></td><td>One-step USB flashing</td></tr>
+        <tr><td><code>parts/</code> · <code>SHA256SUMS.txt</code> · <code>CHANGELOG.md</code></td><td>Separate images for manual flashing, checksums, what changed</td></tr>
+      </table>
+    </div>
+
+    <div class="panel" style="height:388px">
+      <h2><i>2</i>Flash over USB</h2>
+      <p>A new drone needs one USB flash; after that it updates over Wi-Fi. You need Python 3 and a USB-C <b>data</b> cable (some only charge).</p>
+      <h3>Mac or Linux</h3>
+      <ol>
+        <li>Unzip the firmware and open a terminal in that folder.</li>
+        <li>Unplug the battery, then plug in the XIAO.</li>
+        <li>Run <code>./flash-mac-linux.sh</code>. It finds the port and installs esptool if missing.</li>
+        <li>Wait for <code>Done.</code> (about 15&nbsp;s).</li>
+      </ol>
+      <h3>Windows</h3>
+      <ol>
+        <li>Unzip the firmware, unplug the battery, plug in the XIAO.</li>
+        <li>Device Manager &gt; Ports: note the COM number, e.g. COM5.</li>
+        <li>In that folder run <code>flash-windows.bat COM5</code> and wait for <code>Done.</code></li>
+      </ol>
+      <h3>By hand, any system</h3>
+<pre>python3 -m pip install esptool
+python3 -m esptool --chip esp32s3 -p &lt;port&gt; -b 460800 write_flash 0x0 TheDroneCommunity-firmware-1.2.3-full.bin</pre>
+      <p>Use the <code>-ios</code> file name for the iOS build.</p>
+      <p><b>XIAO not found?</b> Hold <b>B</b> (BOOT) while plugging in the cable, then run it again.</p>
+      <p><b>Check:</b> unplug USB, connect the battery, wait 5&nbsp;s. Wi-Fi <code>ESP-DRONE_</code> + 12 characters appears, password <code>12345678</code>.</p>
+      <h3 style="margin-top:9px">Flashing a batch</h3>
+      <p>Swap XIAOs and re-run the script, about 15&nbsp;s each. esptool prints <code>MAC: 7c:e8:b1:a6:94:4c</code>; the drone's Wi-Fi is that MAC in capitals with the last byte plus one: <code>ESP-DRONE_7CE8B1A6944D</code>. Write it on the frame.</p>
+    </div>
+
+    <div class="panel" style="height:388px">
+      <h2><i>3</i>Update over Wi-Fi</h2>
+      <p>Any drone already on our firmware (1.1.0 or later) updates from the Android app, no cable.</p>
+      <ol style="margin-top:4px">
+        <li>Copy <code>ESPDrone-1.2.3-update.bin</code> (or the <code>-ios</code> one) to the phone.</li>
+        <li>Charge the battery, power the drone from it, put it on the ground.</li>
+        <li>Join the drone's Wi-Fi and tap <b>Connect</b> in the app. Don't arm.</li>
+        <li>Gear &gt; <b>Drone settings</b> &gt; <b>Firmware update</b> &gt; <b>Choose firmware file…</b></li>
+        <li>Wait while it shows <b>Sending …%</b>. The drone reboots by itself.</li>
+        <li>Reconnect: <b>Installed:</b> shows the new version.</li>
+      </ol>
+      <p class="note">Works on the iOS build too: it disarms for the update while it sits on the ground with the throttle at zero, and waits 15&nbsp;s before arming itself again.</p>
+      <h3 style="margin-top:10px">Which version is on a drone?</h3>
+      <p>Drone settings &gt; Firmware update shows <b>Installed:</b>. Over USB the boot log prints <code>drone API … (fw 1.2.3-tdc)</code>.</p>
+      <h3 style="margin-top:10px">Needs updating</h3>
+      <p>Drones on <b>1.2.2 or older</b> spin steadily in flight (yaw fix is in 1.2.3) and may refuse clone IMU chips (fixed in 1.2.2). Update every drone before the workshop.</p>
+      <h3 style="margin-top:10px">Rename a drone's Wi-Fi</h3>
+      <p>With many drones in one room: Drone settings &gt; <b>Wi-Fi name and password</b>, type a short name (it becomes <code>ESP-DRONE_&lt;name&gt;</code>) and a new password, then <b>Save and restart drone</b>. Anyone else flying it enters the same password there before Connect.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span><b>Downloads:</b> <code>TheDroneCommunity-firmware-1.2.3.zip</code> · <code>-1.2.3-ios.zip</code> · <code>TheDroneCommunity-app-1.2.2.zip</code><br>Firmware: ESP-Drone / Crazyflie, GPL-3.0 · App: ESP-Drone-Android, GPL-2.0+ · Font: Sora, OFL</span>
+    <span class="rt">Help: The Drone Community group<br>thedronecommunity.com · Page 1 of 2</span>
+  </footer>
+</section>
+
+<section class="page">
+  <header>
+    <div>
+      <h1>Connect · Fly · <em>Fix</em></h1>
+      <p class="sub">Android app, iPhone app, the checks before the first flight, and what to do when it misbehaves</p>
+    </div>
+    <div class="org"><b>The Drone Community</b><br>XIAO S3 Drone · Install Guide</div>
+  </header>
+
+  <div class="grid" style="top:88px">
+    <div class="panel" style="height:268px">
+      <h2><i>4</i>Android app<span class="tag dark">Android 8+</span></h2>
+      <h3>Install</h3>
+      <ol>
+        <li>Copy <code>TheDroneCommunity-1.2.2.apk</code> to the phone.</li>
+        <li>Tap it; allow <b>Install unknown apps</b> if asked; tap <b>Install</b> or <b>Update</b>.</li>
+      </ol>
+      <h3>Connect</h3>
+      <ol>
+        <li>Battery in, USB out.</li>
+        <li>Wi-Fi: join <code>ESP-DRONE_…</code>, password <code>12345678</code>. On <b>No internet</b>, tap <b>Stay connected</b>.</li>
+        <li>Turn mobile data off.</li>
+        <li>Tap <b>Connect</b>, wait for <b>Parameters TOC fetch finished</b>. <b>Arm</b> lights up after it.</li>
+      </ol>
+      <h3>Fly</h3>
+      <ol>
+        <li>Left stick down, tap <b>Arm</b>, raise it within 20&nbsp;s.</li>
+        <li>Left stick: throttle and turn. Right stick: tilt.</li>
+        <li><b>Land</b> brings it down. <b>Hold to stop</b> cuts the motors (it drops).</li>
+      </ol>
+      <p class="note">After every battery swap or USB plug-in the drone restarts: tap <b>Disconnect</b>, <b>Connect</b>, then <b>Arm</b> again.</p>
+    </div>
+
+    <div class="panel" style="height:268px">
+      <h2><i>5</i>iPhone and iPad<span class="tag">iOS build</span></h2>
+      <p>iPhones use Espressif's free <b>ESP-Drone</b> app (App Store, iOS 10+) with the <b>1.2.3-ios</b> firmware.</p>
+      <h3>Prepare the drone, once</h3>
+      <ol>
+        <li>Flash <code>…-1.2.3-ios-full.bin</code> over USB, or send <code>ESPDrone-1.2.3-ios-update.bin</code> from the Android app.</li>
+      </ol>
+      <h3>Connect</h3>
+      <ol>
+        <li>Install <b>ESP-Drone</b> by Espressif Systems.</li>
+        <li>Battery in, USB out.</li>
+        <li>Settings &gt; Wi-Fi: join <code>ESP-DRONE_…</code>, password <code>12345678</code>. Stay on it if iOS warns about no internet.</li>
+        <li>Open ESP-Drone and connect.</li>
+      </ol>
+      <h3>Fly</h3>
+      <ol>
+        <li>Throttle at the bottom for 1&nbsp;s: the drone arms itself (no Arm button).</li>
+        <li>Raise the throttle: the motors spin straight away.</li>
+        <li>Throttle to the bottom to stop. It disarms after 20&nbsp;s idle on the ground or 2&nbsp;s after the app disconnects.</li>
+      </ol>
+      <p class="note">Link lost in the air or battery low: it lands by itself. Not yet test-flown with this app: try one drone first.</p>
+    </div>
+
+    <div class="panel full">
+      <h2><i>6</i>Before the first flight<span class="tag dark">once per drone · Android app</span></h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <table class="motors">
+          <tr><th>Motor</th><th>Position</th><th>Pin</th><th>Spins / prop</th></tr>
+          <tr><td><b>M1</b></td><td>Front right</td><td>D3 · GPIO 4</td><td><s class="dot cw"></s>CW</td></tr>
+          <tr><td><b>M2</b></td><td>Rear right</td><td>D7 · GPIO 44</td><td><s class="dot ccw"></s>CCW</td></tr>
+          <tr><td><b>M3</b></td><td>Rear left</td><td>D2 · GPIO 3</td><td><s class="dot cw"></s>CW</td></tr>
+          <tr><td><b>M4</b></td><td>Front left</td><td>D0 · GPIO 1</td><td><s class="dot ccw"></s>CCW</td></tr>
+        </table>
+        <ul class="check">
+          <li><b>Props</b> match the table. Firmware 1.2.3 expects M1 + M3 CW, M2 + M4 CCW.</li>
+          <li><b>Motor test</b>, props off: Drone settings &gt; Motor test &gt; Test all four in turn.</li>
+          <li><b>Level calibration</b>: flat table, hands off, Drone settings &gt; Level calibration &gt; Calibrate.</li>
+          <li><b>First hover</b>: 30&nbsp;cm for 5&nbsp;s. It holds its heading; a tap of yaw right turns the nose right.</li>
+        </ul>
+      </div>
+      <p class="note">Spins steadily on take-off? Land at once: a motor or prop is the wrong way round for this table.</p>
+    </div>
+
+    <div class="panel full">
+      <h2><i>7</i>Troubleshooting</h2>
+      <table class="trouble">
+        <tr><th>What you see</th><th>Cause</th><th>Fix</th></tr>
+        <tr><td>Computer doesn't see the XIAO</td><td>Charge-only cable, battery plugged in, USB port shut down</td><td>Data cable, unplug the battery, hold B (BOOT) while plugging in, try another port</td></tr>
+        <tr><td>No <code>ESP-DRONE_</code> network</td><td>Antenna off, no power, still booting</td><td>Clip the antenna onto the XIAO, check the battery, wait 5&nbsp;s</td></tr>
+        <tr><td>App: No SoftAP connection</td><td>App older than 1.2.2 on Android 10+</td><td>Install <code>TheDroneCommunity-1.2.2.apk</code></td></tr>
+        <tr><td>Arm stays grey</td><td>Old app, or settings still downloading</td><td>Install 1.2.2; wait for the TOC toast</td></tr>
+        <tr><td>TOC fetch finished: 0, sticks dead</td><td>Old app skipped the settings download</td><td>Install 1.2.2</td></tr>
+        <tr><td>Shows Armed, sticks do nothing</td><td>Drone restarted after a battery or USB swap</td><td>Disconnect, Connect, Arm again</td></tr>
+        <tr><td>Spins steadily in flight</td><td>Firmware 1.2.2 or older, or props reversed</td><td>Flash 1.2.3; check the prop table</td></tr>
+        <tr><td>Slow turn, a few °/s</td><td>Normal gyro drift on clone IMU chips</td><td>Power-cycle while it sits still; correct with yaw</td></tr>
+        <tr><td>Log: MPU6050 I2C [FAIL]</td><td>IMU not soldered or seated</td><td>Reflow VCC, GND, SCL, SDA on the GY-521; it won't fly until fixed</td></tr>
+        <tr><td>No live video</td><td>No camera fitted, or loose ribbon</td><td>Reseat the ribbon; it flies without a camera</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    <span><b>More:</b> XIAO S3 Drone Quick Guide (board, wiring, lights, programming) · <code>CHANGELOG.md</code> in each zip<br>Firmware: ESP-Drone / Crazyflie, GPL-3.0 · App: ESP-Drone-Android, GPL-2.0+ · Font: Sora, OFL</span>
+    <span class="rt">Help: The Drone Community group<br>thedronecommunity.com · Page 2 of 2</span>
+  </footer>
+</section>
+</body></html>
