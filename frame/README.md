@@ -1,3 +1,14 @@
+# Frames
+
+Two 3D-printable TPU frames for PCB1 and 8520 coreless motors.
+
+| Frame | Size | Printed mass | Status |
+|---|---|---|---|
+| [**v2 Strong**](v2-strong/) | 94 × 94 mm box frame | About 22 g | **Recommended.** Flight-tested with a GNB 550 mAh 1S battery |
+| [75 mm ducted](#8520-brushed-tpu-ducted-frame-for-pcb1-75-mm-props) (below) | 172 × 172 mm, ducted props | About 26 g | Alternative design with ducted 75 mm props |
+
+---
+
 # 8520 brushed TPU ducted frame for PCB1 (75 mm props)
 
 Parametric OpenSCAD frame for the XIAO ESP32-S3 drone PCB1, 8520 coreless motors,

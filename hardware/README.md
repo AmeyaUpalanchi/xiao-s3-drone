@@ -40,7 +40,7 @@ Click the image for full size.
 | Battery voltage sense | 100 k / 100 k divider (R11, R12) | Read on D1 / GPIO 2 |
 | Add-on ports | 2 × Qwiic, JST SH 1.0 mm 4-pin (CN5, CN6) | 3.3 V I²C: height sensor and other add-ons |
 | Lights | 2 white + 2 red LEDs | On whenever the battery is connected |
-| Mounting | 4 × M3 holes on a 42.27 mm square | Fits the TPU frame in [`../frame`](../frame) |
+| Mounting | 4 × M3 holes on a 42.27 mm square | Fits both frames in [`../frame`](../frame) |
 
 > **Never connect USB and the battery at the same time.** The boost converter drives the
 > XIAO's 5 V pin, which is the same line USB uses. With both plugged in the battery gets
@@ -91,8 +91,8 @@ CL10A106KP8NNNC, which is LCSC part C19702.
 | GY-521 MPU-6050 module | 1 | Clone modules with MPU6500-family chips work too |
 | 8520 coreless brushed motors with JST SH 2-pin plugs | 4 | 2 clockwise + 2 counter-clockwise |
 | 75 mm propellers | 4 | 2 CW + 2 CCW: M1 and M3 CW, M2 and M4 CCW |
-| 1S LiPo battery with an XT30 plug | 1 | About 66 × 18 × 6.5 mm to fit the frame's battery cage |
-| TPU frame | 1 | Print the STLs in [`../frame/stl`](../frame/stl) |
+| 1S LiPo battery with an XT30 plug | 1 | Tested with a GNB 550 mAh 1S pack |
+| TPU frame | 1 | Print [`../frame/v2-strong/frame_v2_strong.stl`](../frame/v2-strong/) |
 | M3 screws | 4 | Board to frame |
 | VL53L1X or VL53L0X height sensor (optional) | 1 | Plugs into CN5 or CN6 for altitude hold |
 

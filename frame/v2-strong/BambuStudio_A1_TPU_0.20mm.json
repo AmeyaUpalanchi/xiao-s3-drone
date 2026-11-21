@@ -1,0 +1,62 @@
+{
+    "from": "User",
+    "inherits": "0.20mm Standard @BBL A1",
+    "name": "0.20mm TPU Drone Frame @BBL A1",
+    "print_settings_id": "0.20mm TPU Drone Frame @BBL A1",
+    "version": "2.7.0.8",
+    "print_extruder_id": [
+        "1"
+    ],
+    "print_extruder_variant": [
+        "Direct Drive Standard"
+    ],
+    "layer_height": "0.2",
+    "wall_loops": "2",
+    "wall_generator": "arachne",
+    "sparse_infill_density": "100%",
+    "sparse_infill_pattern": "zig-zag",
+    "top_shell_layers": "5",
+    "bottom_shell_layers": "4",
+    "enable_support": "0",
+    "brim_type": "no_brim",
+    "reduce_crossing_wall": "1",
+    "initial_layer_speed": [
+        "20"
+    ],
+    "initial_layer_infill_speed": [
+        "25"
+    ],
+    "outer_wall_speed": [
+        "25"
+    ],
+    "inner_wall_speed": [
+        "30"
+    ],
+    "sparse_infill_speed": [
+        "30"
+    ],
+    "internal_solid_infill_speed": [
+        "30"
+    ],
+    "top_surface_speed": [
+        "25"
+    ],
+    "gap_infill_speed": [
+        "20"
+    ],
+    "bridge_speed": [
+        "15"
+    ],
+    "overhang_2_4_speed": [
+        "20"
+    ],
+    "overhang_3_4_speed": [
+        "15"
+    ],
+    "overhang_4_4_speed": [
+        "10"
+    ],
+    "travel_speed": [
+        "200"
+    ]
+}

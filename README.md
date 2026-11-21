@@ -65,10 +65,10 @@
 | Board | PCB1: 50 × 50 mm, 2 layers, 4 × M3 on a 42.27 mm square |
 | Motors | 4 × 8520 coreless brushed, MOSFET-driven, JST SH 2-pin |
 | Propellers | 75 mm, 2 CW + 2 CCW |
-| Battery | 1S LiPo, XT30, with reverse-polarity and TVS protection |
+| Battery | 1S LiPo with XT30, tested with a GNB 550 mAh pack; reverse-polarity and TVS protection on board |
 | Power | TPS61023 boost converter: 5 V for the XIAO from the 1S pack |
 | Expansion | 2 × Qwiic (JST SH 4-pin, 3.3 V I²C) |
-| Frame | TPU, ducted, 171.7 × 171.7 mm, 26 g printed |
+| Frame | [v2 Strong](frame/v2-strong/): TPU 95A, 94 × 94 mm, about 22 g printed (flight-tested) |
 
 Full details, pin map and ordering steps: [hardware/README.md](hardware/README.md).
 
@@ -167,7 +167,7 @@ The version must match `DRONE_FW_VERSION` in `drone_api.h` and `versionName` in 
 │   ├── quick-guide/     Board quick guide (PDF + source)
 │   └── DEVELOPER.md     Internals: web API, safety system, pin map
 ├── firmware/        Flight firmware (ESP-IDF, based on ESP-Drone / Crazyflie)
-├── frame/           Parametric OpenSCAD frame, STLs and renders
+├── frame/           3D-printable frames: v2 Strong (flight-tested) and a 75 mm ducted design
 ├── hardware/        Schematic, Gerbers, BOM, pick-and-place, STEP model
 └── tools/           Release script, IMU orientation viewer, changelog
 ```
@@ -179,7 +179,7 @@ The version must match `DRONE_FW_VERSION` in `drone_api.h` and `versionName` in 
 | [Install guide](docs/install-guide/TDC_XIAO_S3_Drone_Install_Guide.pdf) | Flashing, Android and iPhone setup, pre-flight checks, troubleshooting |
 | [Quick guide](docs/quick-guide/XIAO_S3_Drone_Quick_Guide.pdf) | Board tour, wiring, status lights, programming |
 | [Hardware](hardware/README.md) | Schematic, bill of materials, ordering and assembly |
-| [Frame](frame/README.md) | Printing the frame, dimensions, weight |
+| [Frame](frame/README.md) | Printing and assembling the frame, dimensions, weight |
 | [Developer notes](docs/DEVELOPER.md) | Web API, flight safety, IMU mapping, release builds |
 | [Changelog](tools/CHANGELOG.md) | What changed in each version |
 
