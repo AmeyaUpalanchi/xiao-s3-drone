@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' http: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'">
+<title>TDC Drone</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="drag"></div>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="5" cy="5" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+          <path d="M7.2 7.2l3 3M16.8 7.2l-3 3M7.2 16.8l3-3M16.8 16.8l-3-3"/>
+          <rect x="9.5" y="9.5" width="5" height="5" rx="1"/>
+        </g>
+      </svg>
+      <div>
+        <div class="brand-name">TDC Drone</div>
+        <div class="brand-sub">The Drone Community</div>
+      </div>
+    </div>
+
+    <nav>
+      <a href="#drone" data-page="drone" class="on">Drone</a>
+      <a href="#firmware" data-page="firmware">Firmware update</a>
+      <a href="#usb" data-page="usb">USB flash</a>
+      <a href="#bench" data-page="bench">Motors and level</a>
+      <a href="#wifi" data-page="wifi">Wi-Fi name</a>
+      <a href="#camera" data-page="camera">Camera</a>
+    </nav>
+
+    <div class="link" id="link">
+      <div class="link-row"><span class="dot" id="link-dot"></span><span id="link-text">Looking for the drone…</span></div>
+      <button class="host" id="host-btn" title="Change the drone's address">192.168.43.42</button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- ============================================================ drone -->
+    <section class="page on" id="page-drone">
+      <header>
+        <h1 id="drone-title">Drone</h1>
+        <p class="sub" id="drone-sub">Join the drone's Wi-Fi to see it here.</p>
+      </header>
+
+      <div id="offline" class="offline">
+        <ol>
+          <li>Connect the battery and wait for the lights.</li>
+          <li>On this computer, join the Wi-Fi network <b>ESP-DRONE_…</b>, password <code>12345678</code>.</li>
+          <li>This page fills in as soon as the drone answers. Nothing else to do.</li>
+        </ol>
+        <p class="muted">Is the drone on USB instead? Use <a href="#usb" data-goto="usb">USB flash</a> to install firmware on it.</p>
+      </div>
+
+      <div id="online" hidden>
+        <div class="battery">
+          <div class="battery-num"><span id="bat-v">-</span><small> V</small></div>
+          <div class="battery-side">
+            <div class="bar"><i id="bat-bar"></i></div>
+            <div class="muted" id="bat-text">-</div>
+          </div>
+        </div>
+
+        <dl class="facts">
+          <dt>State</dt><dd id="f-state">-</dd>
+          <dt>Firmware</dt><dd id="f-fw">-</dd>
+          <dt>Wi-Fi</dt><dd id="f-ssid">-</dd>
+          <dt>Motion sensor</dt><dd id="f-imu">-</dd>
+          <dt>Height sensor</dt><dd id="f-tof">-</dd>
+          <dt>Camera</dt><dd id="f-cam">-</dd>
+          <dt>Level trim</dt><dd id="f-level">-</dd>
+        </dl>
+
+        <div class="actions">
+          <button class="btn" id="beep-btn">Find my drone</button>
+          <button class="btn ghost" id="reboot-btn">Restart drone</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ firmware -->
+    <section class="page" id="page-firmware">
+      <header>
+        <h1>Firmware update</h1>
+        <p class="sub">Updates the drone over Wi-Fi. Takes about half a minute, and the drone restarts at the end.</p>
+      </header>
+
+      <dl class="facts compact">
+        <dt>On the drone</dt><dd id="ota-current">Not connected</dd>
+        <dt>Latest release</dt><dd id="ota-latest">Checking GitHub…</dd>
+      </dl>
+
+      <div class="block">
+        <h2>Install the latest release</h2>
+        <div class="row">
+          <label class="select">
+            Build
+            <select id="ota-build">
+              <option value="android">For the Android app</option>
+              <option value="ios">For the ESP-Drone iPhone app</option>
+            </select>
+          </label>
+          <button class="btn primary" id="ota-latest-btn" disabled>Install</button>
+        </div>
+        <details class="notes" id="ota-notes" hidden><summary>What's new</summary><pre id="ota-notes-text"></pre></details>
+      </div>
+
+      <div class="block">
+        <h2>Or install a file</h2>
+        <div class="drop" id="ota-drop">
+          <span id="ota-file-text">Drop an <code>ESPDrone-…-update.bin</code> here, or <a href="#" id="ota-pick">choose one</a>.</span>
+        </div>
+        <div class="row" id="ota-file-row" hidden>
+          <span id="ota-file-info" class="muted"></span>
+          <button class="btn primary" id="ota-file-btn">Install this file</button>
+        </div>
+      </div>
+
+      <div class="progress" id="ota-progress" hidden>
+        <div class="bar"><i id="ota-bar"></i></div>
+        <div id="ota-status">-</div>
+      </div>
+    </section>
+
+    <!-- ============================================================ usb -->
+    <section class="page" id="page-usb">
+      <header>
+        <h1>USB flash</h1>
+        <p class="sub">For a new board, or a drone that won't start after a bad update. Erases the Wi-Fi name and level trim.</p>
+      </header>
+
+      <ol class="steps">
+        <li>Unplug the battery. USB and battery must never be connected together.</li>
+        <li>Plug the XIAO into this computer with a USB-C data cable.</li>
+        <li>Pick what to flash and press the button.</li>
+      </ol>
+
+      <div class="block">
+        <div class="radio-list">
+          <label><input type="radio" name="usb-src" value="latest" checked> Latest release <span class="muted" id="usb-latest-ver"></span></label>
+          <div class="indent">
+            <select id="usb-build">
+              <option value="android">For the Android app</option>
+              <option value="ios">For the ESP-Drone iPhone app</option>
+            </select>
+          </div>
+          <label><input type="radio" name="usb-src" value="file"> A full image file <span class="muted" id="usb-file-name"></span></label>
+          <div class="indent"><a href="#" id="usb-pick">Choose <code>…-full.bin</code></a></div>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="usb-go">Connect and flash</button>
+          <span class="muted" id="usb-hint">If the board isn't found, hold BOOT while plugging it in.</span>
+        </div>
+      </div>
+
+      <div class="progress" id="usb-progress" hidden>
+        <div class="bar"><i id="usb-bar"></i></div>
+        <div id="usb-status">-</div>
+      </div>
+      <details class="log"><summary>Log</summary><pre id="usb-log"></pre></details>
+    </section>
+
+    <!-- ============================================================ bench -->
+    <section class="page" id="page-bench">
+      <header>
+        <h1>Motors and level</h1>
+        <p class="sub">The drone has to be connected and disarmed.</p>
+      </header>
+
+      <p class="warn">Take the propellers off before you test the motors.</p>
+
+      <div class="bench">
+        <div class="quad">
+          <svg viewBox="0 0 260 260" id="quad">
+            <g stroke="var(--line-strong)" stroke-width="10" stroke-linecap="round">
+              <line x1="60" y1="60" x2="200" y2="200"/><line x1="200" y1="60" x2="60" y2="200"/>
+            </g>
+            <rect x="100" y="100" width="60" height="60" rx="8" fill="var(--surface-high)" stroke="var(--line-strong)"/>
+            <path d="M122 108 l8 -8 l8 8" fill="none" stroke="var(--muted)" stroke-width="2"/>
+            <text x="130" y="140" text-anchor="middle" class="quad-front">front</text>
+            <!-- M4 front left, M1 front right, M2 rear right, M3 rear left -->
+            <g class="motor" data-m="4" transform="translate(55 55)"><circle r="40"/><text y="-2">M4</text><text y="16" class="dir">CCW</text></g>
+            <g class="motor" data-m="1" transform="translate(205 55)"><circle r="40"/><text y="-2">M1</text><text y="16" class="dir">CW</text></g>
+            <g class="motor" data-m="2" transform="translate(205 205)"><circle r="40"/><text y="-2">M2</text><text y="16" class="dir">CCW</text></g>
+            <g class="motor" data-m="3" transform="translate(55 205)"><circle r="40"/><text y="-2">M3</text><text y="16" class="dir">CW</text></g>
+          </svg>
+          <p class="muted center">Click a motor to spin it for a moment. Check it turns the way shown.</p>
+          <div class="actions center">
+            <button class="btn" id="motor-all">Spin all four in order</button>
+          </div>
+        </div>
+
+        <div class="level">
+          <h2>Level calibration</h2>
+          <p>Put the drone on a flat table and don't touch it. This takes about two seconds and is stored on the drone.</p>
+          <dl class="facts compact"><dt>Current trim</dt><dd id="level-now">-</dd></dl>
+          <div class="actions">
+            <button class="btn primary" id="level-btn">Calibrate</button>
+            <button class="btn ghost" id="level-reset">Reset</button>
+          </div>
+          <p class="muted" id="level-msg"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ wifi -->
+    <section class="page" id="page-wifi">
+      <header>
+        <h1>Wi-Fi name</h1>
+        <p class="sub">Give each drone its own name so they're easy to tell apart. The drone restarts and you'll have to join the new network.</p>
+      </header>
+
+      <form id="wifi-form" class="form">
+        <label>Network name
+          <div class="prefixed"><span>ESP-DRONE_</span><input id="wifi-name" maxlength="20" placeholder="leave empty for the default" pattern="[A-Za-z0-9_\-]*" spellcheck="false"></div>
+          <small class="muted">Letters, numbers, - and _. Up to 20.</small>
+        </label>
+        <label>New password
+          <input id="wifi-pass" type="password" minlength="8" maxlength="63" placeholder="leave empty to keep the current one">
+          <small class="muted">8 to 63 characters.</small>
+        </label>
+        <div class="actions">
+          <button class="btn primary" type="submit" id="wifi-save">Save and restart</button>
+        </div>
+        <p class="muted" id="wifi-msg"></p>
+      </form>
+    </section>
+
+    <!-- ============================================================ camera -->
+    <section class="page" id="page-camera">
+      <header>
+        <h1>Camera</h1>
+        <p class="sub" id="cam-sub">Live view from the XIAO ESP32-S3 Sense camera.</p>
+      </header>
+      <div class="cam-wrap">
+        <div class="cam" id="cam">
+          <img id="cam-img" alt="">
+          <div class="cam-empty" id="cam-empty">No picture</div>
+        </div>
+        <div class="actions center">
+          <button class="btn" id="cam-toggle">Start live view</button>
+          <button class="btn primary" id="cam-photo">Take photo</button>
+        </div>
+        <p class="muted center" id="cam-msg"></p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<dialog id="host-dialog">
+  <form method="dialog">
+    <h2>Drone address</h2>
+    <p class="muted">Normally 192.168.43.42. Only change it if you know the drone is somewhere else.</p>
+    <input id="host-input" spellcheck="false">
+    <div class="actions right">
+      <button class="btn ghost" value="cancel">Cancel</button>
+      <button class="btn ghost" value="default" id="host-default">Use default</button>
+      <button class="btn primary" value="ok">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

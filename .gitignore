@@ -10,3 +10,6 @@ android-app/local.properties
 dist/
 firmware/build-ios/
 firmware/sdkconfig.ios
+android-app/keystore.properties
+desktop-app/node_modules/
+desktop-app/dist/
