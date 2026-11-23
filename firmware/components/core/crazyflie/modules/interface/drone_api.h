@@ -10,9 +10,9 @@
 #include "sdkconfig.h"
 
 #ifdef CONFIG_DRONE_AUTO_ARM
-#define DRONE_FW_VERSION "1.2.5-tdc-ios"
+#define DRONE_FW_VERSION "1.2.6-tdc-ios"
 #else
-#define DRONE_FW_VERSION "1.2.5-tdc"
+#define DRONE_FW_VERSION "1.2.6-tdc"
 #endif
 
 /** Start the web server on :80 (status, tools, firmware update). */

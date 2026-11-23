@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.2.6
+- Camera: live view lags much less. The drone sent each frame in small pieces and waited for the
+  phone after every piece; it now sends a frame in one or two goes
+- Firmware: the motor test, level calibration, Wi-Fi change and firmware update now stop the
+  drone being armed until they finish, so an update can't reboot it in the air
+- Firmware: after a failsafe landing starts because the Wi-Fi dropped, the drone only hands
+  control back once the app is sending thrust again. A low-battery landing always finishes
+- Firmware: in altitude hold the drone only arms with the throttle stick at or below the middle
+- Firmware: the firmware update no longer freezes the drone's web page if the phone walks out of
+  range, long Wi-Fi passwords are no longer cut short, and changing only the password keeps the
+  network name
+- Firmware: fixed a sign error in the level calibration maths
+- iOS build: the web tools can no longer disarm a drone hovering in altitude hold, and the motor
+  test works while the app is connected
+- App: no more zero-thrust moment when the drone hands control back after a failsafe; the drone
+  state updates four times a second instead of once
+- App: settings can't be opened while armed; fixed a crash after a firmware update, the Wi-Fi
+  password being saved before the drone accepted it, and the connection dropping on a dark-mode
+  switch
+- Installer: works from folders with spaces in the name, finds a real Python on Windows, and asks
+  before removing an old app or when several phones are plugged in
+
 ## 1.2.5
 - One-click installer: double-click Install.command (Mac) or Install.bat (Windows) in the release
   folder, or run one command, and it flashes the drone over USB and installs the app on an Android
