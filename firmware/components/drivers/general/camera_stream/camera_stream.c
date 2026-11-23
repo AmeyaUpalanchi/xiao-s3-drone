@@ -12,6 +12,7 @@
 #include "esp_timer.h"
 #include "esp_http_server.h"
 #include "esp_camera.h"
+#include "lwip/sockets.h"
 #include "sdkconfig.h"
 #include "camera_stream.h"
 
@@ -65,8 +66,9 @@ static const char *TAG = "CAMERA";
 
 #define PART_BOUNDARY "espdroneframe"
 static const char *STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
-static const char *STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
-static const char *STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\nX-Timestamp: %lld\r\n\r\n";
+/* Boundary and part header go out as one write, so each frame is two sends. */
+static const char *STREAM_PART = "\r\n--" PART_BOUNDARY "\r\n"
+                                 "Content-Type: image/jpeg\r\nContent-Length: %u\r\nX-Timestamp: %lld\r\n\r\n";
 
 static bool cameraPresent = false;
 static const char *sensorName = "none";
@@ -172,9 +174,14 @@ static esp_err_t stream_handler(httpd_req_t *req)
     }
     add_common_headers(req);
 
+    /* Without this, Nagle holds the small header write until the phone ACKs
+     * the previous frame, which adds a delayed-ACK stall to every frame. */
+    int nodelay = 1;
+    setsockopt(httpd_req_to_sockfd(req), IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
     const int64_t min_frame_us = 1000000LL / CONFIG_DRONE_CAM_MAX_FPS;
     int64_t last_frame = 0;
-    char part_buf[96];
+    char part_buf[128];
     streamClients++;
     ESP_LOGI(TAG, "stream client connected (%d)", streamClients);
 
@@ -194,10 +201,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
         }
         size_t hlen = snprintf(part_buf, sizeof(part_buf), STREAM_PART,
                                (unsigned)fb->len, (long long)last_frame);
-        res = httpd_resp_send_chunk(req, STREAM_BOUNDARY, strlen(STREAM_BOUNDARY));
-        if (res == ESP_OK) {
-            res = httpd_resp_send_chunk(req, part_buf, hlen);
-        }
+        res = httpd_resp_send_chunk(req, part_buf, hlen);
         if (res == ESP_OK) {
             res = httpd_resp_send_chunk(req, (const char *)fb->buf, fb->len);
         }
@@ -222,6 +226,8 @@ static void start_stream_server(void)
     config.max_open_sockets = 2;
     config.lru_purge_enable = true;
     config.server_port = 81;
+    /* Same core as Wi-Fi and the camera DMA task, away from the flight loop. */
+    config.core_id = 0;
     config.ctrl_port = 32769;
     httpd_handle_t stream = NULL;
     if (httpd_start(&stream, &config) == ESP_OK) {

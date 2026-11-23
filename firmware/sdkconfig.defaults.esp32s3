@@ -40,3 +40,8 @@ CONFIG_CAMERA_CORE0=y
 
 # Drone web API (status, tools, firmware upload)
 CONFIG_HTTPD_MAX_URI_LEN=512
+
+# Camera stream: a 6 KB TCP send buffer needs ~7 round trips per VGA frame and
+# made live view lag. 16 MSS lets a frame go out in one or two.
+CONFIG_LWIP_TCP_SND_BUF_DEFAULT=23040
+CONFIG_ESP32_WIFI_TX_BA_WIN=16
