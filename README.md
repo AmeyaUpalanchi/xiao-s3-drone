@@ -26,8 +26,27 @@ to the XIAO S3 and our board, with a few things added on top:
 
 ## Flashing and flying
 
-Grab the firmware zip and the APK from [Releases](../../releases). With the battery
-**unplugged**, connect the XIAO over USB-C and run:
+The quickest way: take the battery off, plug the drone into your computer (and your Android
+phone too, with USB debugging on, if you want the app installed), then run
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AmeyaUpalanchi/xiao-s3-drone/main/tools/installer/install.sh | sh
+```
+
+On Windows, in PowerShell:
+
+```
+irm https://raw.githubusercontent.com/AmeyaUpalanchi/xiao-s3-drone/main/tools/installer/install.ps1 | iex
+```
+
+It downloads the latest release, flashes the drone, tells you its Wi-Fi name, and installs and
+opens the app on the phone. For the iPhone build, end the command with `| sh -s -- --ios`
+instead. The release zips
+also have an `Install.command` (Mac, right-click > Open the first time) and `Install.bat`
+(Windows) that do the same thing with the files in the folder.
+
+To do it by hand, grab the firmware zip and the APK from [Releases](../../releases). With the
+battery **unplugged**, connect the XIAO over USB-C and run:
 
 ```bash
 unzip TheDroneCommunity-firmware-<version>.zip

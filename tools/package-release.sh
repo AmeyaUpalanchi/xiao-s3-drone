@@ -39,6 +39,14 @@ echo "== app"
 echo "== package"
 mkdir -p "$DIST"
 
+# add_installer <folder>: one-click installer (Install.command / Install.bat)
+add_installer() {
+  for f in install.sh Install.command install.ps1 Install.bat tdc_install.py; do
+    cp "$ROOT/tools/installer/$f" "$1/"
+  done
+  chmod +x "$1/install.sh" "$1/Install.command"
+}
+
 # fw_package <name> <build dir>
 fw_package() {
   NAME=$1; B=$2; OUT="$DIST/TheDroneCommunity-firmware-$NAME"
@@ -54,6 +62,7 @@ fw_package() {
     sed "s/1\.2\.0/$NAME/g" "$ROOT/tools/$f" > "$OUT/$f"
   done
   chmod +x "$OUT/flash-mac-linux.sh"
+  add_installer "$OUT"
   cp "$ROOT/tools/CHANGELOG.md" "$OUT/"
   ( cd "$OUT" && find . -type f ! -name SHA256SUMS.txt | sort | xargs shasum -a 256 > SHA256SUMS.txt )
   ( cd "$DIST" && zip -qr "TheDroneCommunity-firmware-$NAME.zip" "TheDroneCommunity-firmware-$NAME" )
@@ -78,6 +87,7 @@ mkdir -p "$OUT"
 cp -R "$DIST/TheDroneCommunity-firmware-$VERSION" "$OUT/firmware"
 cp -R "$DIST/TheDroneCommunity-firmware-$VERSION-ios" "$OUT/firmware-ios"
 cp "$DIST/TheDroneCommunity-$VERSION.apk" "$OUT/"
+add_installer "$OUT"
 sed "s/{{VERSION}}/$VERSION/g" "$ROOT/tools/QUICKSTART.template.md" > "$OUT/QUICKSTART.md"
 cp "$ROOT/tools/LICENSES.md" "$ROOT/android-app/licenses/Sora-OFL.txt" "$ROOT/tools/CHANGELOG.md" "$OUT/"
 cp "$ROOT/docs/install-guide/TDC_XIAO_S3_Drone_Install_Guide.pdf" \

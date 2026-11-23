@@ -11,6 +11,15 @@
 | `firmware-ios/` | The same firmware built for Espressif's ESP-Drone iPhone app (see `README-iOS.txt`) |
 | `TDC_XIAO_S3_Drone_Install_Guide.pdf` | Step-by-step install guide (2 pages) |
 
+## Quickest way
+
+Take the battery off and plug the drone into the computer. If you want the app installed too,
+plug in the Android phone with USB debugging on. Then double-click **Install.command** (Mac,
+right-click > Open the first time) or **Install.bat** (Windows). It flashes the drone, installs
+and opens the app, and tells you the drone's Wi-Fi name.
+
+Or do it by hand:
+
 ## 1. Flash the drone (once, over USB)
 
 Plug the XIAO ESP32-S3 into your computer with a data USB-C cable. Take the battery off.

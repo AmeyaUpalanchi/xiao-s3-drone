@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.5
+- One-click installer: double-click Install.command (Mac) or Install.bat (Windows) in the release
+  folder, or run one command, and it flashes the drone over USB and installs the app on an Android
+  phone plugged in with USB debugging. It downloads esptool and adb by itself
+- The APK is now signed with a proper release key. If you have 1.2.4 or older installed, uninstall
+  it once (the installer does this for you)
+- No firmware changes apart from the version number
+
 ## 1.2.4
 - Firmware: VL53L0X height sensor support on a Qwiic port (CN5/CN6): altitude hold, Take off and
   height-based landing, like the VL53L1X. Best below about 1 m; the VL53L1X reaches further
