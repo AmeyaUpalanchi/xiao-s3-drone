@@ -1,50 +1,20 @@
 # Contributing
 
-Thanks for helping improve the XIAO S3 Drone. Bug reports, fixes, hardware notes and
-documentation changes are all welcome.
+Bug reports and PRs are welcome.
 
-## Reporting a bug
+When you open an issue about the drone, please say which firmware version you're on (the
+boot log prints it, and the app shows it under Firmware update), your phone and app version,
+and what hardware you have (IMU module, motors, battery, any sensors). A USB boot log helps
+a lot: battery unplugged, `idf.py monitor` or any serial monitor at 115200.
 
-Open an issue and include:
+For bigger changes open an issue first so we can talk about it. Keep PRs to one thing, and
+add a line to `tools/CHANGELOG.md` if users will notice the change.
 
-- **Firmware version.** The app shows it under Drone settings > Firmware update, and the USB
-  boot log prints it as `fw 1.2.x-tdc`.
-- **App and phone.** App version, phone model, Android or iOS version.
-- **Hardware.** PCB revision, IMU module, motors, battery, and any add-ons (height sensor, camera).
-- **What happened.** Steps to reproduce it, what you expected, and what you saw.
-- **The boot log**, if the problem is on the drone. Plug in USB (battery unplugged) and run
-  `idf.py monitor`, or any serial monitor at 115200 baud.
+Anything that touches flight has to be tried on a real drone before it gets merged. Props
+off for the bench checks and motor test, then a short low hover. Mention in the PR what
+you tested on.
 
-## Proposing a change
+The board is done in EasyEDA. If you change it, re-export all the files in `hardware/`
+together with the same date in the names.
 
-For anything bigger than a small fix, open an issue first so we can agree on the approach.
-
-1. Fork the repo and create a branch from `main`.
-2. Keep each pull request focused on one change.
-3. Follow the style of the code around your change: 4-space indent in C and Java, and
-   ESP-IDF conventions in the firmware.
-4. Add a line to [tools/CHANGELOG.md](tools/CHANGELOG.md) for user-visible changes.
-5. Describe in the pull request what you changed and how you tested it.
-
-## Testing on hardware
-
-Firmware changes that affect flight must be tested on a real drone before they're merged.
-
-- Bench first, **propellers off**: check the boot log, then run the motor test from the app.
-- Then a short, low hover over a soft surface.
-- Say in the pull request which board, IMU chip and motors you tested with.
-
-**Never connect USB and the battery at the same time.** Flash and read logs on USB only;
-fly on the battery only.
-
-## Hardware changes
-
-The board is designed in EasyEDA. When you change it, update every exported file in
-[`hardware/`](hardware/) together (schematic, Gerber, BOM, pick-and-place, STEP), use the same
-date in the file names, and describe the change in the pull request.
-
-## License
-
-By contributing you agree that your work is released under the license of the part you
-changed: CERN-OHL-S-2.0 for `hardware/`, GPL-3.0 for `firmware/`, GPL-2.0-or-later for
-`android-app/`.
+Contributions fall under the license of the folder you change (see the README).
