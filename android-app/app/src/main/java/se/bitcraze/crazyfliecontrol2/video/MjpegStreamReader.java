@@ -73,6 +73,9 @@ public class MjpegStreamReader {
                     throw new IOException("camera returned HTTP " + code);
                 }
                 InputStream in = new BufferedInputStream(c.getInputStream(), 64 * 1024);
+                if (!mRunning) {
+                    break;
+                }
                 mListener.onStreamConnected();
                 readFrames(in);
             } catch (IOException e) {
@@ -125,7 +128,7 @@ public class MjpegStreamReader {
             byte[] jpeg = new byte[length];
             readFully(in, jpeg);
             Bitmap bmp = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length, opts);
-            if (bmp != null) {
+            if (bmp != null && mRunning) {   // not after stop(): it would bring back a stale frame
                 mListener.onFrame(jpeg, bmp);
             }
         }

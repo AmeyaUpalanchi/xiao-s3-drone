@@ -58,6 +58,10 @@ public class MainPresenter {
     public static final int STATE_ARMED = 1;
     public static final int STATE_LANDING = 2;
     public static final int STATE_FAILSAFE = 3;
+    public static final int STATE_SERVICE = 4;   // motor test / web tool running, motors not ours
+    /** After a local arm/land/disarm, ignore drone reports this long: they may predate it. */
+    private static final long LOCAL_STATE_HOLD_MS = 1000;
+    private volatile long mLocalStateMs = 0;
     private static final long LAND_DESCENT_MS = 3000;
     private static final long LAND_RAMP_MS = 1500;
     private volatile boolean mFirmwareSafety = false;   // firmware has the "safety" param group
@@ -496,6 +500,11 @@ public class MainPresenter {
         return 32767f + axis * 32767f;
     }
 
+    private void setLocalFlightState(int state) {
+        mLocalStateMs = System.currentTimeMillis();
+        setFlightState(state);
+    }
+
     private void setFlightState(int state) {
         if (mFlightState != state) {
             mFlightState = state;
@@ -514,14 +523,14 @@ public class MainPresenter {
             mCrazyflie.setParamValue("safety.land", 0);
             mCrazyflie.setParamValue("safety.armed", 1);
         }
-        setFlightState(STATE_ARMED);
+        setLocalFlightState(STATE_ARMED);
     }
 
     public void disarm() {
         if (mFirmwareSafety && isConnected()) {
             mCrazyflie.setParamValue("safety.armed", 0);
         }
-        setFlightState(STATE_DISARMED);
+        setLocalFlightState(STATE_DISARMED);
     }
 
     public void autoLand() {
@@ -533,7 +542,7 @@ public class MainPresenter {
         }
         mLandStartThrust = mLastSentThrust;
         mLandStartMs = System.currentTimeMillis();
-        setFlightState(STATE_LANDING);
+        setLocalFlightState(STATE_LANDING);
     }
 
     public void cancelLanding() {
@@ -543,7 +552,7 @@ public class MainPresenter {
         if (mFirmwareSafety && isConnected()) {
             mCrazyflie.setParamValue("safety.land", 0);
         }
-        setFlightState(STATE_ARMED);
+        setLocalFlightState(STATE_ARMED);
     }
 
     /** Emergency: cut the motors now. */
@@ -551,7 +560,7 @@ public class MainPresenter {
         if (mFirmwareSafety && isConnected()) {
             mCrazyflie.setParamValue("safety.kill", 1);
         }
-        setFlightState(STATE_DISARMED);
+        setLocalFlightState(STATE_DISARMED);
     }
 
     /** Applies the arm state to the pilot's thrust before it is sent. */
@@ -564,7 +573,10 @@ public class MainPresenter {
             case STATE_LANDING:
             case STATE_FAILSAFE:
                 if (mFirmwareSafety) {
-                    out = 0;   // the drone flies the landing itself and ignores this
+                    // The drone flies the landing itself and ignores this, but it hands
+                    // control back the moment the link recovers. Sending 0 here would
+                    // stop the motors in the air until the next state report.
+                    out = pilotThrust;
                 } else {
                     // Old firmware: run the same timed descent from the app
                     long t = System.currentTimeMillis() - mLandStartMs;
@@ -603,7 +615,8 @@ public class MainPresenter {
                     mainActivity.setHeight(mHeight);
                 }
                 Number safety = data.get("safety.state");
-                if (safety != null && mFirmwareSafety) {
+                if (safety != null && mFirmwareSafety
+                        && System.currentTimeMillis() - mLocalStateMs > LOCAL_STATE_HOLD_MS) {
                     setFlightState(safety.intValue());
                 }
             }
@@ -615,7 +628,7 @@ public class MainPresenter {
     };
 
     private LogConfig createDefaultLogConfig() {
-        LogConfig logConfigStandard = new LogConfig("Standard", 1000);
+        LogConfig logConfigStandard = new LogConfig("Standard", 250);   // safety.state must follow the drone quickly
         logConfigStandard.addVariable("pm.vbat", VariableType.FLOAT);
         if (mLogToc != null && mLogToc.getElementByCompleteName("pm.batteryLevel") != null) {
             logConfigStandard.addVariable("pm.batteryLevel", VariableType.UINT8_T);

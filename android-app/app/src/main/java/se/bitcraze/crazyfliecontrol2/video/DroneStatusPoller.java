@@ -21,6 +21,9 @@ public class DroneStatusPoller {
     private final Listener mListener;
     private final Handler mMain = new Handler(Looper.getMainLooper());
     private ScheduledExecutorService mExecutor;
+    /* Bumped on stop(): a poll still blocked in HTTP when the activity paused
+     * must not deliver its result afterwards. */
+    private volatile int mGeneration = 0;
 
     public DroneStatusPoller(Listener listener) {
         mListener = listener;
@@ -31,17 +34,20 @@ public class DroneStatusPoller {
             return;
         }
         mExecutor = Executors.newSingleThreadScheduledExecutor();
-        mExecutor.scheduleWithFixedDelay(this::pollOnce, 0, 2, TimeUnit.SECONDS);
+        final int gen = ++mGeneration;
+        mExecutor.scheduleWithFixedDelay(() -> pollOnce(gen), 0, 2, TimeUnit.SECONDS);
     }
 
     public synchronized void stop() {
+        mGeneration++;
+        mMain.removeCallbacksAndMessages(null);
         if (mExecutor != null) {
             mExecutor.shutdownNow();
             mExecutor = null;
         }
     }
 
-    private void pollOnce() {
+    private void pollOnce(int gen) {
         HttpURLConnection c = null;
         try {
             c = DroneNetwork.open(DroneNetwork.STATUS_URL, 1500, 1500);
@@ -56,9 +62,17 @@ public class DroneStatusPoller {
                 out.write(buf, 0, n);
             }
             final DroneStatus s = DroneStatus.parse(out.toString("UTF-8"));
-            mMain.post(() -> mListener.onDroneStatus(s));
+            mMain.post(() -> {
+                if (gen == mGeneration) {
+                    mListener.onDroneStatus(s);
+                }
+            });
         } catch (Exception e) {
-            mMain.post(mListener::onDroneUnreachable);
+            mMain.post(() -> {
+                if (gen == mGeneration) {
+                    mListener.onDroneUnreachable();
+                }
+            });
         } finally {
             if (c != null) {
                 c.disconnect();

@@ -335,7 +335,7 @@ public class MainActivity extends EspActivity {
         }
         boolean connected = mPresenter != null && mPresenter.isConnected();
         int state = mPresenter != null ? mPresenter.getFlightState() : MainPresenter.STATE_DISARMED;
-        boolean armed = state != MainPresenter.STATE_DISARMED;
+        boolean armed = state != MainPresenter.STATE_DISARMED && state != MainPresenter.STATE_SERVICE;
         boolean landing = state == MainPresenter.STATE_LANDING || state == MainPresenter.STATE_FAILSAFE;
 
         mArmButton.setEnabled(connected);
@@ -430,7 +430,8 @@ public class MainActivity extends EspActivity {
 
     /** Warn once at 25 % and again at 15 % while armed. */
     private void checkBatteryWarning(int percent) {
-        boolean armed = mPresenter != null && mPresenter.getFlightState() != MainPresenter.STATE_DISARMED;
+        int st = mPresenter != null ? mPresenter.getFlightState() : MainPresenter.STATE_DISARMED;
+        boolean armed = st != MainPresenter.STATE_DISARMED && st != MainPresenter.STATE_SERVICE;
         if (!armed || percent < 0) {
             return;
         }
@@ -900,6 +901,12 @@ public class MainActivity extends EspActivity {
 
             @Override
             public void onClick(View v) {
+              // Leaving this screen drops the link, and the drone would failsafe-land.
+              int st = mPresenter.getFlightState();
+              if (st != MainPresenter.STATE_DISARMED && st != MainPresenter.STATE_SERVICE) {
+                  Toast.makeText(MainActivity.this, R.string.settings_disarm_first, Toast.LENGTH_SHORT).show();
+                  return;
+              }
               Intent intent = new Intent(MainActivity.this, DroneToolsActivity.class);
               startActivity(intent);
             }
@@ -1073,7 +1080,10 @@ public class MainActivity extends EspActivity {
         mPresenter.onDestroy();
         mUiHandler.removeCallbacksAndMessages(null);
         mMediaExecutor.shutdown();
-        DroneNetwork.stop();
+        if (isFinishing()) {
+            // Only when really leaving: releasing the request makes Android drop the drone's Wi-Fi.
+            DroneNetwork.stop();
+        }
         super.onDestroy();
     }
 

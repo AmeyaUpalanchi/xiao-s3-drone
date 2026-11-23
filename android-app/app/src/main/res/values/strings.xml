@@ -78,6 +78,7 @@
     <string name="wifi_saved">Saved. The drone is restarting; tap Connect again in about 10 seconds.</string>
     <string name="wifi_saved_local">Password saved on this phone. It will be used next time you tap Connect.</string>
     <string name="wifi_err_pass">Use 8 to 63 characters</string>
+    <string name="wifi_err_pass_chars">Plain letters, numbers and symbols only, no \" or \\</string>
 
     <string name="fw_title">Firmware update</string>
     <string name="fw_current_fmt">Installed: %1$s</string>
@@ -103,6 +104,7 @@
     <string name="button_disarm">Disarm</string>
     <string name="button_land">Land</string>
     <string name="button_cancel_land">Cancel</string>
+    <string name="settings_disarm_first">Land and disarm before opening settings.</string>
     <string name="button_stop_motors">Hold to stop</string>
     <string name="status_landing">Landing…</string>
     <string name="status_failsafe">Signal lost, landing</string>

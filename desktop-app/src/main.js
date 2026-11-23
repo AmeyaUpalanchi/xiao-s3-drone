@@ -123,33 +123,49 @@ function unzip(buf) {
   return out;
 }
 
-function httpsGet(url, { json = false, redirects = 5 } = {}) {
+function httpsGet(url, { json = false, redirects = 5, timeout = 30000, follow = true } = {}) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'tdc-drone-desktop', Accept: json ? 'application/vnd.github+json' : '*/*' } }, (res) => {
-      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
+    const req = https.get(url, { headers: { 'User-Agent': 'tdc-drone-desktop', Accept: json ? 'application/vnd.github+json' : '*/*' } }, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
         res.resume();
-        return resolve(httpsGet(res.headers.location, { json, redirects: redirects - 1 }));
+        if (!follow) return resolve({ location: new URL(res.headers.location, url).href });
+        if (redirects <= 0) return reject(new Error('Too many redirects'));
+        return resolve(httpsGet(new URL(res.headers.location, url).href, { json, redirects: redirects - 1, timeout }));
       }
       if (res.statusCode !== 200) { res.resume(); return reject(new Error('GitHub answered ' + res.statusCode)); }
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
+      res.on('error', reject);
       res.on('end', () => {
         const buf = Buffer.concat(chunks);
-        resolve(json ? JSON.parse(buf.toString('utf8')) : buf);
+        if (!json) return resolve(buf);
+        try { resolve(JSON.parse(buf.toString('utf8'))); } catch { reject(new Error('GitHub sent something unexpected')); }
       });
-    }).on('error', reject);
+    });
+    // no data for this long means the connection stalled
+    req.setTimeout(timeout, () => req.destroy(new Error('GitHub stopped answering')));
+    req.on('error', reject);
   });
 }
 
 async function latestRelease() {
-  const rel = await httpsGet(`https://api.github.com/repos/${REPO}/releases/latest`, { json: true });
-  return {
-    version: rel.tag_name.replace(/^v/, ''),
-    published: rel.published_at,
-    url: rel.html_url,
-    notes: rel.body || '',
-    assets: rel.assets.map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
-  };
+  try {
+    const rel = await httpsGet(`https://api.github.com/repos/${REPO}/releases/latest`, { json: true });
+    return {
+      version: rel.tag_name.replace(/^v/, ''),
+      published: rel.published_at,
+      url: rel.html_url,
+      notes: rel.body || '',
+      assets: rel.assets.map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
+    };
+  } catch (err) {
+    // The API allows 60 requests an hour per IP, which a classroom on one network
+    // uses up fast. github.com/.../releases/latest redirects to the tag and has no limit.
+    const r = await httpsGet(`https://github.com/${REPO}/releases/latest`, { follow: false }).catch(() => null);
+    const m = r && r.location && r.location.match(/\/tag\/v([^/?#]+)/);
+    if (!m) throw err;
+    return { version: m[1], published: null, url: r.location, notes: '', assets: [] };
+  }
 }
 
 // Download a release's firmware zip and keep the update and full images in the cache.

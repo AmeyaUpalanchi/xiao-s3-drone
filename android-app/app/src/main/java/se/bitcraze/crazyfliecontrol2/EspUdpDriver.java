@@ -174,7 +174,6 @@ public class EspUdpDriver extends CrtpDriver {
                         checksum += (b & 0xff);
                     }
                     buf[buf.length - 1] = (byte) checksum;
-                    Log.w(TAG, "run: PostData: " + Arrays.toString(buf));
                     DatagramPacket udpPacket = new DatagramPacket(buf, buf.length, mmDevAddress, DEVICE_PORT);
                     mmSocket.send(udpPacket);
                 } catch (IOException e) {
@@ -208,8 +207,13 @@ public class EspUdpDriver extends CrtpDriver {
             DatagramPacket udpPacket = new DatagramPacket(buf, buf.length);
             while (!mmSocket.isClosed() && !isInterrupted()) {
                 try {
+                    // receive() shrinks the packet length to the last datagram; without
+                    // resetting it, a longer packet after a short one gets cut off.
+                    udpPacket.setLength(buf.length);
                     mmSocket.receive(udpPacket);
-                    Log.w(TAG, "run: ReceiveData");
+                    if (udpPacket.getLength() < 1) {
+                        continue;       // empty datagram: new byte[-1] would kill the thread
+                    }
                     byte[] raw = udpPacket.getData();
                     byte[] data = new byte[udpPacket.getLength() - 1];
                     System.arraycopy(udpPacket.getData(), udpPacket.getOffset(), data, 0, data.length);

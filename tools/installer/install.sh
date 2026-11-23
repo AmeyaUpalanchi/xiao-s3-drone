@@ -44,10 +44,7 @@ else
 fi
 
 # Running from an unzipped release: use the files next to us instead of downloading
-DIR_ARG=""
 if [ -n "$HERE" ] && { [ -d "$HERE/firmware" ] || ls "$HERE"/*-full.bin >/dev/null 2>&1; }; then
-  DIR_ARG="--dir $HERE"
+  exec "$VENV/bin/python" "$SCRIPT" --dir "$HERE" "$@"
 fi
-
-# shellcheck disable=SC2086
-exec "$VENV/bin/python" "$SCRIPT" $DIR_ARG "$@"
+exec "$VENV/bin/python" "$SCRIPT" "$@"

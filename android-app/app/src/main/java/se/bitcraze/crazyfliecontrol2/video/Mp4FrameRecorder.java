@@ -130,7 +130,8 @@ public class Mp4FrameRecorder {
         }
         synchronized (mLock) {
             boolean keep = mMuxerStarted && mFrames > 0;
-            releaseQuietly();
+            // A muxer that fails to stop leaves an unplayable file: don't publish it.
+            keep &= releaseQuietly();
             String path = mTarget != null ? mTarget.displayPath : null;
             if (mTarget != null) {
                 MediaSaver.finishVideo(mContext, mTarget, keep);
@@ -173,7 +174,7 @@ public class Mp4FrameRecorder {
         }
     }
 
-    private void releaseQuietly() {
+    private boolean releaseQuietly() {
         try {
             if (mCodec != null) {
                 mCodec.stop();
@@ -191,17 +192,24 @@ public class Mp4FrameRecorder {
             mInput.release();
             mInput = null;
         }
-        try {
-            if (mMuxer != null) {
+        boolean ok = true;
+        if (mMuxer != null) {
+            try {
                 if (mMuxerStarted) {
                     mMuxer.stop();
                 }
-                mMuxer.release();
+            } catch (RuntimeException e) {
+                Log.w(TAG, "muxer stop", e);
+                ok = false;
+            } finally {
+                try {
+                    mMuxer.release();
+                } catch (RuntimeException ignored) {
+                }
             }
-        } catch (RuntimeException e) {
-            Log.w(TAG, "muxer stop", e);
-            mMuxerStarted = false;
         }
+        mMuxerStarted = false;
         mMuxer = null;
+        return ok;
     }
 }

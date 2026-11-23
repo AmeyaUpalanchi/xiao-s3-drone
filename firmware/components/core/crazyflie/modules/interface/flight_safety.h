@@ -28,11 +28,10 @@ bool flightSafetyMotorsAllowed(void);
 /** true while a service routine owns the motors (stabilizer must not touch them). */
 bool flightSafetyServiceActive(void);
 
-/** True when a web tool may run: disarmed, or (iOS auto-arm build) armed but idle on
- *  the ground, in which case it disarms and holds off auto-arm for 15 s. */
-bool flightSafetyDisarmForTools(void);
-
-/** Enter / leave service mode. Begin fails unless the drone is disarmed. */
+/** Enter / leave service mode (motor test, beeper and the other web tools).
+ *  Begin fails unless the drone is disarmed, or (iOS auto-arm build) armed but idle
+ *  on the ground, in which case it disarms and holds off auto-arm for 15 s.
+ *  Call from the web API task, not from the stabilizer. */
 bool flightSafetyBeginService(void);
 void flightSafetyEndService(void);
 

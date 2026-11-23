@@ -70,15 +70,21 @@ document.querySelectorAll('nav a, [data-goto]').forEach((a) =>
 // ------------------------------------------------------------------ status
 
 async function poll() {
-  if (polling) {
-    const r = await tdc.get('/status');
-    setDrone(r.ok && r.json ? r.json : null);
+  try {
+    if (polling) {
+      const r = await tdc.get('/status');
+      setDrone(r.ok && r.json ? r.json : null);
+    }
+    if (!latest && !latestLoading) loadLatest();   // e.g. started while on the drone's Wi-Fi
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setTimeout(poll, drone ? 1500 : 2000);
   }
-  setTimeout(poll, drone ? 1500 : 2000);
 }
 
+let lastSsid = null;
 function setDrone(s) {
-  const was = !!drone;
   drone = s;
   $('link-dot').className = 'dot' + (s ? ' ok' : '');
   $('link-text').textContent = s ? s.ssid : 'Not connected';
@@ -108,7 +114,7 @@ function setDrone(s) {
   $('f-state').textContent = STATES[s.state] || 'Unknown (' + s.state + ')';
   $('f-fw').textContent = s.fw;
   $('f-ssid').textContent = `${s.ssid}, channel ${s.channel}`;
-  $('f-imu').innerHTML = s.imu
+  $('f-imu').innerHTML = s.imu === undefined ? '-' : s.imu
     ? (s.selftest ? '<span class="good">OK</span>' : '<span class="bad">Found, but the self-test failed. Keep the drone still while it starts.</span>')
     : '<span class="bad">Not found. Check the GY-521 module.</span>';
   $('f-tof').textContent = s.tof ? `Fitted, reads ${s.height.toFixed(2)} m` : 'None';
@@ -118,8 +124,9 @@ function setDrone(s) {
   $('level-now').textContent = trim;
 
   $('ota-current').textContent = s.fw;
-  if (!was) {
-    // pick the matching build the first time we see the drone
+  if (s.ssid !== lastSsid) {
+    // pick the matching build the first time we see this drone
+    lastSsid = s.ssid;
     const ios = /-ios$/.test(s.fw) ? 'ios' : 'android';
     $('ota-build').value = ios;
     $('usb-build').value = ios;
@@ -141,8 +148,12 @@ function updateButtons() {
 
 // ------------------------------------------------------------------ latest release
 
+let latestLoading = false, latestTried = 0;
 async function loadLatest() {
-  const r = await tdc.latest();
+  if (Date.now() - latestTried < 30000) return;   // retry at most every 30 s
+  latestTried = Date.now();
+  latestLoading = true;
+  const r = await tdc.latest().finally(() => { latestLoading = false; });
   if (!r.ok) {
     $('ota-latest').textContent = "Couldn't reach GitHub. You can still install a file.";
     $('usb-latest-ver').textContent = '(offline)';
@@ -160,7 +171,7 @@ async function loadLatest() {
 
 function showLatest() {
   if (!latest) return;
-  let text = `${latest.version}, released ${ago(latest.published)}`;
+  let text = latest.published ? `${latest.version}, released ${ago(latest.published)}` : latest.version;
   const upToDate = drone && !newer(latest.version, drone.fw);
   if (drone) text += upToDate ? '. The drone is up to date.' : '. Newer than the drone.';
   $('ota-latest').textContent = text;
@@ -208,9 +219,12 @@ async function installOta(file) {
   if (back) {
     setDrone(back);
     $('ota-bar').className = 'ok';
-    otaProgress(back.fw === before
-      ? `The drone is back, still on ${back.fw}. It may have rejected the file.`
-      : `Done. The drone is now on ${back.fw}.`, 1);
+    const want = file.info.version;
+    const same = cleanVersion(back.fw) === cleanVersion(want) || back.fw !== before;
+    if (!same) $('ota-bar').className = 'warn';
+    otaProgress(same
+      ? `Done. The drone is now on ${back.fw}.`
+      : `The drone is back, still on ${back.fw}. It may have rejected the file.`, 1);
   } else {
     otaProgress("The update was sent but the drone hasn't come back yet. Rejoin its Wi-Fi; your computer may have switched networks while it restarted.", 1);
   }
@@ -221,8 +235,9 @@ $('ota-latest-btn').addEventListener('click', async () => {
   if (!latest || !needDrone()) return;
   const ios = $('ota-build').value === 'ios';
   otaProgress(`Downloading ${latest.version} from GitHub…`, 0.02);
-  $('ota-latest-btn').disabled = true;
+  busy = true; updateButtons();
   const r = await tdc.firmware(latest.version, ios);
+  busy = false;
   if (!r.ok) {
     otaProgress('Download failed: ' + r.error, 0);
     updateButtons();
@@ -286,7 +301,7 @@ $('usb-pick').addEventListener('click', async (e) => {
 $('usb-go').addEventListener('click', async () => {
   if (!navigator.serial) { toast('This computer has no serial support.', true); return; }
   const src = document.querySelector('input[name=usb-src]:checked').value;
-  let file;
+  let file, transport;
   $('usb-go').disabled = true;
   $('usb-log').textContent = '';
   try {
@@ -309,7 +324,7 @@ $('usb-go').addEventListener('click', async () => {
     } catch {
       throw new Error("No board found. Check the cable is a data cable, or hold BOOT while plugging in.");
     }
-    const transport = new Transport(port, false);
+    transport = new Transport(port, false);
     const terminal = { clean() {}, writeLine: usbLog, write: (d) => usbLog(String(d).trimEnd()) };
     const loader = new ESPLoader({ transport, baudrate: 460800, romBaudrate: 115200, terminal });
     usbProgress('Connecting…', 0.03);
@@ -327,12 +342,12 @@ $('usb-go').addEventListener('click', async () => {
     });
     usbProgress('Restarting the board…', 0.99);
     await loader.after('hard_reset');
-    await transport.disconnect();
     usbProgress(`Done. ${file.info.version} is on the drone. Unplug USB, then connect the battery.`, 1, 'ok');
   } catch (err) {
     usbLog('Error: ' + (err && err.message));
     usbProgress(err.message || String(err), 1, 'danger');
   } finally {
+    if (transport) await transport.disconnect().catch(() => {});
     $('usb-go').disabled = false;
   }
 });
@@ -394,6 +409,7 @@ $('wifi-form').addEventListener('submit', (e) => {
   const pass = $('wifi-pass').value;
   if (!/^[A-Za-z0-9_-]{0,20}$/.test(name)) { $('wifi-msg').textContent = 'Use letters, numbers, - and _ only.'; return; }
   if (pass && (pass.length < 8 || pass.length > 63)) { $('wifi-msg').textContent = 'The password needs 8 to 63 characters.'; return; }
+  if (pass && !/^[\x20-\x7e]*$/.test(pass.replace(/["\\]/g, '\x7f'))) { $('wifi-msg').textContent = 'The password can use plain letters, numbers and symbols, but not " or \\.'; return; }
   job(async () => {
     const body = 'name=' + encodeURIComponent(name) + (pass ? '&password=' + encodeURIComponent(pass) : '');
     const r = await tdc.post('/api/wifi', body);
@@ -439,7 +455,8 @@ $('host-btn').addEventListener('click', async () => {
 });
 $('host-dialog').addEventListener('close', async () => {
   const v = $('host-dialog').returnValue;
-  if (v === 'cancel') return;
+  $('host-dialog').returnValue = '';
+  if (v !== 'ok' && v !== 'default') return;
   const host = v === 'default' ? '192.168.43.42' : $('host-input').value.trim();
   if (!/^[\w.-]+(:\d+)?$/.test(host)) { toast('That address looks wrong.', true); return; }
   await tdc.saveSettings({ host });

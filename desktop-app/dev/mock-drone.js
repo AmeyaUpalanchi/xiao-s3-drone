@@ -49,8 +49,10 @@ http.createServer(async (req, res) => {
   if (p === '/api/level/reset') { st.level_pitch = 0; st.level_roll = 0; return json(res, 200, { ok: true }); }
   if (p === '/api/wifi') {
     const q = new URLSearchParams((await readBody(req)).toString());
-    const name = q.get('name') || '';
-    st.ssid = name ? 'ESP-DRONE_' + name : 'ESP-DRONE_7C2C67A1B2C4';
+    if (q.has('name')) {   // like the firmware: no name= keeps the current name
+      const name = q.get('name');
+      st.ssid = name ? 'ESP-DRONE_' + name : 'ESP-DRONE_7C2C67A1B2C4';
+    }
     json(res, 200, { ok: true, ssid: st.ssid, restart: true });
     offlineUntil = Date.now() + 4000;
     return;

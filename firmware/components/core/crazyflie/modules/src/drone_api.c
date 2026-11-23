@@ -69,9 +69,10 @@ static esp_err_t send_error(httpd_req_t *req, const char *status, const char *ms
     return send_json(req, status, buf);
 }
 
-static bool isDisarmed(void)
+static esp_err_t send_error_fail(httpd_req_t *req, const char *status, const char *msg)
 {
-    return flightSafetyDisarmForTools();
+    send_error(req, status, msg);
+    return ESP_FAIL;
 }
 
 static void restartCb(void *arg)
@@ -166,11 +167,20 @@ static void endService(void)
 
 static esp_err_t motor_handler(httpd_req_t *req)
 {
-    char q[16] = {0}, v[4] = {0};
+    /* A cut-off query (e.g. a long cache-buster after m=1) must not fall
+     * back to m=0, which spins all four motors. */
+    char q[96] = {0}, v[8] = {0};
     int m = 0;
-    if (httpd_req_get_url_query_str(req, q, sizeof(q)) == ESP_OK &&
-        httpd_query_key_value(q, "m", v, sizeof(v)) == ESP_OK) {
-        m = atoi(v);
+    esp_err_t qe = httpd_req_get_url_query_str(req, q, sizeof(q));
+    if (qe == ESP_OK) {
+        esp_err_t ve = httpd_query_key_value(q, "m", v, sizeof(v));
+        if (ve == ESP_OK) {
+            m = atoi(v);
+        } else if (ve != ESP_ERR_NOT_FOUND) {
+            return send_error(req, "400 Bad Request", "m must be 0-4");
+        }
+    } else if (qe != ESP_ERR_NOT_FOUND) {
+        return send_error(req, "400 Bad Request", "query too long");
     }
     if (m < 0 || m > NBR_OF_MOTORS) {
         return send_error(req, "400 Bad Request", "m must be 0-4");
@@ -208,12 +218,15 @@ static esp_err_t beep_handler(httpd_req_t *req)
 
 static esp_err_t level_handler(httpd_req_t *req)
 {
-    if (!isDisarmed()) {
-        return send_error(req, "409 Conflict", "disarm the drone first");
+    /* Service mode for the whole measurement, so nobody can arm meanwhile. */
+    if (!beginService(req)) {
+        return ESP_OK;
     }
     float p, r;
     const char *err = "unknown";
-    if (!levelCalibRun(&p, &r, &err)) {
+    bool ok = levelCalibRun(&p, &r, &err);
+    endService();
+    if (!ok) {
         return send_error(req, "422 Unprocessable Entity", err);
     }
     char json[96];
@@ -223,10 +236,11 @@ static esp_err_t level_handler(httpd_req_t *req)
 
 static esp_err_t level_reset_handler(httpd_req_t *req)
 {
-    if (!isDisarmed()) {
-        return send_error(req, "409 Conflict", "disarm the drone first");
+    if (!beginService(req)) {
+        return ESP_OK;
     }
     levelCalibReset();
+    endService();
     return send_json(req, "200 OK", "{\"ok\":true}");
 }
 
@@ -239,62 +253,99 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
     return send_json(req, "200 OK", json);
 }
 
+static esp_err_t wifi_post(httpd_req_t *req);
+
 static esp_err_t wifi_post_handler(httpd_req_t *req)
 {
-    if (!isDisarmed()) {
-        return send_error(req, "409 Conflict", "disarm the drone first");
+    /* Held until the restart: the drone can't be armed in between. */
+    if (!beginService(req)) {
+        return ESP_OK;
     }
-    char body[200] = {0};
-    int len = req->content_len < (int)sizeof(body) - 1 ? req->content_len : (int)sizeof(body) - 1;
+    esp_err_t res = wifi_post(req);
+    if (res != ESP_OK) {
+        endService();
+    }
+    return ESP_OK;
+}
+
+/* Returns ESP_OK only when the settings were saved and a restart is coming. */
+static esp_err_t wifi_post(httpd_req_t *req)
+{
+    /* A 63-character password can be up to 189 bytes once URL-encoded. */
+    char body[320] = {0};
+    if (req->content_len >= (int)sizeof(body)) {
+        return send_error_fail(req, "400 Bad Request", "too long");
+    }
+    int len = req->content_len;
     int got = 0;
     while (got < len) {
         int r = httpd_req_recv(req, body + got, len - got);
         if (r <= 0) {
-            return send_error(req, "400 Bad Request", "no body");
+            return send_error_fail(req, "400 Bad Request", "no body");
         }
         got += r;
     }
-    char name[64] = {0}, pass[100] = {0};
-    httpd_query_key_value(body, "name", name, sizeof(name));
-    httpd_query_key_value(body, "password", pass, sizeof(pass));
+    char name[64] = {0}, pass[200] = {0};
+    /* A truncated value would save a different password than the user typed. */
+    esp_err_t ne = httpd_query_key_value(body, "name", name, sizeof(name));
+    esp_err_t pe = httpd_query_key_value(body, "password", pass, sizeof(pass));
+    if (ne == ESP_ERR_HTTPD_RESULT_TRUNC || pe == ESP_ERR_HTTPD_RESULT_TRUNC) {
+        return send_error_fail(req, "400 Bad Request", "too long");
+    }
+    /* No name= at all means "keep the name"; name= with nothing means "default". */
+    bool setName = (ne == ESP_OK);
     urlDecode(name);
     urlDecode(pass);
 
     size_t nl = strlen(name), pl = strlen(pass);
     if (nl > 20) {
-        return send_error(req, "400 Bad Request", "name: up to 20 characters");
+        return send_error_fail(req, "400 Bad Request", "name: up to 20 characters");
     }
     for (size_t i = 0; i < nl; i++) {
         if (!isalnum((unsigned char)name[i]) && name[i] != '-' && name[i] != '_') {
-            return send_error(req, "400 Bad Request", "name: letters, numbers, - and _ only");
+            return send_error_fail(req, "400 Bad Request", "name: letters, numbers, - and _ only");
         }
     }
     if (pl != 0 && (pl < 8 || pl > 63)) {
-        return send_error(req, "400 Bad Request", "password: 8 to 63 characters");
+        return send_error_fail(req, "400 Bad Request", "password: 8 to 63 characters");
     }
     for (size_t i = 0; i < pl; i++) {
         if (pass[i] < 0x20 || pass[i] > 0x7e || pass[i] == '"' || pass[i] == '\\') {
-            return send_error(req, "400 Bad Request", "password: plain characters only");
+            return send_error_fail(req, "400 Bad Request", "password: plain characters only");
         }
     }
 
     nvs_handle_t h;
     if (nvs_open("tdc", NVS_READWRITE, &h) != ESP_OK) {
-        return send_error(req, "500 Internal Server Error", "storage");
+        return send_error_fail(req, "500 Internal Server Error", "storage");
     }
-    if (nl) {
-        nvs_set_str(h, "wifi_name", name);
-    } else {
-        nvs_erase_key(h, "wifi_name");
+    esp_err_t e = ESP_OK;
+    if (setName) {
+        if (nl) {
+            e = nvs_set_str(h, "wifi_name", name);
+        } else if (nvs_erase_key(h, "wifi_name") == ESP_ERR_NVS_NOT_FOUND) {
+            e = ESP_OK;
+        }
     }
-    if (pl) {
-        nvs_set_str(h, "wifi_pass", pass);
+    if (e == ESP_OK && pl) {
+        e = nvs_set_str(h, "wifi_pass", pass);
     }
-    nvs_commit(h);
+    if (e == ESP_OK) {
+        e = nvs_commit(h);
+    }
     nvs_close(h);
+    if (e != ESP_OK) {
+        return send_error_fail(req, "500 Internal Server Error", "could not save");
+    }
 
+    char ssid[48];
+    if (!setName) {
+        snprintf(ssid, sizeof(ssid), "%s", wifiGetSsid());
+    } else {
+        snprintf(ssid, sizeof(ssid), "ESP-DRONE_%s", nl ? name : "<mac>");
+    }
     char json[128];
-    snprintf(json, sizeof(json), "{\"ok\":true,\"ssid\":\"ESP-DRONE_%s\",\"restart\":true}", nl ? name : "<mac>");
+    snprintf(json, sizeof(json), "{\"ok\":true,\"ssid\":\"%s\",\"restart\":true}", ssid);
     send_json(req, "200 OK", json);
     restartSoon();
     return ESP_OK;
@@ -302,22 +353,34 @@ static esp_err_t wifi_post_handler(httpd_req_t *req)
 
 /* ---------------------------------------------------------------- ota */
 
+static esp_err_t ota_upload(httpd_req_t *req);
+
 static esp_err_t ota_handler(httpd_req_t *req)
 {
-    if (!isDisarmed()) {
-        return send_error(req, "409 Conflict", "disarm the drone first");
+    /* Service mode for the whole upload and until the restart, so the drone
+     * can't be armed and flown while flash writes stall the flight loop. */
+    if (!beginService(req)) {
+        return ESP_OK;
     }
+    if (ota_upload(req) != ESP_OK) {
+        endService();
+    }
+    return ESP_OK;
+}
+
+static esp_err_t ota_upload(httpd_req_t *req)
+{
     const esp_partition_t *part = esp_ota_get_next_update_partition(NULL);
     if (!part) {
-        return send_error(req, "500 Internal Server Error", "no OTA partition (flash once over USB)");
+        return send_error_fail(req, "500 Internal Server Error", "no OTA partition (flash once over USB)");
     }
     if (req->content_len <= 0 || (size_t)req->content_len > part->size) {
-        return send_error(req, "400 Bad Request", "file size does not fit");
+        return send_error_fail(req, "400 Bad Request", "file size does not fit");
     }
 
     char *buf = malloc(4096);
     if (!buf) {
-        return send_error(req, "500 Internal Server Error", "out of memory");
+        return send_error_fail(req, "500 Internal Server Error", "out of memory");
     }
     esp_ota_handle_t ota = 0;
     bool started = false;
@@ -325,18 +388,35 @@ static esp_err_t ota_handler(httpd_req_t *req)
     esp_err_t err = ESP_OK;
     const char *msg = NULL;
 
+    const size_t descOff = sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t);
+    const int headLen = (int)(descOff + sizeof(esp_app_desc_t));
+    int timeouts = 0;
+    int have = 0;       // bytes in buf not yet written
     while (remaining > 0) {
-        int r = httpd_req_recv(req, buf, remaining < 4096 ? remaining : 4096);
+        int r = httpd_req_recv(req, buf + have, (remaining < 4096 - have) ? remaining : 4096 - have);
         if (r == HTTPD_SOCK_ERR_TIMEOUT) {
+            /* A phone that walked out of range never resets the connection;
+             * don't keep the only web server task waiting forever. */
+            if (++timeouts > 3) {
+                msg = "upload interrupted";
+                break;
+            }
             continue;
         }
         if (r <= 0) {
             msg = "upload interrupted";
             break;
         }
+        timeouts = 0;
+        remaining -= r;
+        have += r;
+        if (!started && have < headLen && remaining > 0) {
+            continue;       // need the whole header before checking it
+        }
+        r = have;
+        have = 0;
         if (!started) {
-            const size_t descOff = sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t);
-            if (r < (int)(descOff + sizeof(esp_app_desc_t)) || (uint8_t)buf[0] != ESP_IMAGE_HEADER_MAGIC) {
+            if (r < headLen || (uint8_t)buf[0] != ESP_IMAGE_HEADER_MAGIC) {
                 msg = "not an ESP32 firmware file";
                 break;
             }
@@ -358,7 +438,6 @@ static esp_err_t ota_handler(httpd_req_t *req)
             msg = "flash write failed";
             break;
         }
-        remaining -= r;
     }
     free(buf);
 
@@ -366,13 +445,13 @@ static esp_err_t ota_handler(httpd_req_t *req)
         if (started) {
             esp_ota_abort(ota);
         }
-        return send_error(req, "400 Bad Request", msg);
+        return send_error_fail(req, "400 Bad Request", msg);
     }
     if (esp_ota_end(ota) != ESP_OK) {
-        return send_error(req, "400 Bad Request", "firmware image failed verification");
+        return send_error_fail(req, "400 Bad Request", "firmware image failed verification");
     }
     if (esp_ota_set_boot_partition(part) != ESP_OK) {
-        return send_error(req, "500 Internal Server Error", "could not select new firmware");
+        return send_error_fail(req, "500 Internal Server Error", "could not select new firmware");
     }
     send_json(req, "200 OK", "{\"ok\":true,\"restart\":true}");
     restartSoon();
@@ -381,8 +460,8 @@ static esp_err_t ota_handler(httpd_req_t *req)
 
 static esp_err_t reboot_handler(httpd_req_t *req)
 {
-    if (!isDisarmed()) {
-        return send_error(req, "409 Conflict", "disarm the drone first");
+    if (!beginService(req)) {       // held until the restart
+        return ESP_OK;
     }
     send_json(req, "200 OK", "{\"ok\":true}");
     restartSoon();

@@ -129,6 +129,9 @@ public class DroneToolsActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        // A delayed refreshStatus (queued after a firmware update) would otherwise run
+        // against the shut-down executor and crash with RejectedExecutionException.
+        mMain.removeCallbacksAndMessages(null);
         mExecutor.shutdownNow();
         super.onDestroy();
     }
@@ -203,7 +206,11 @@ public class DroneToolsActivity extends AppCompatActivity {
     }
 
     private void runDrone(Call call, OnJson onSuccess) {
-        if (mBusy) {
+        runDrone(call, onSuccess, null);
+    }
+
+    private void runDrone(Call call, OnJson onSuccess, Runnable onError) {
+        if (mBusy || mExecutor.isShutdown()) {
             return;
         }
         mBusy = true;
@@ -221,12 +228,18 @@ public class DroneToolsActivity extends AppCompatActivity {
                     mBusy = false;
                     setDroneButtonsEnabled(true);
                     toast(capitalise(e.getMessage()));
+                    if (onError != null) {
+                        onError.run();
+                    }
                 });
             }
         });
     }
 
     private void refreshStatus() {
+        if (mExecutor.isShutdown()) {
+            return;
+        }
         mExecutor.execute(() -> {
             try {
                 JSONObject s = DroneApi.get("/status");
@@ -269,10 +282,19 @@ public class DroneToolsActivity extends AppCompatActivity {
             mWifiPassLayout.setError(getString(R.string.wifi_err_pass));
             return;
         }
+        for (int i = 0; i < pass.length(); i++) {
+            char c = pass.charAt(i);     // same rule as the firmware
+            if (c < 0x20 || c > 0x7e || c == '"' || c == '\\') {
+                mWifiPassLayout.setError(getString(R.string.wifi_err_pass_chars));
+                return;
+            }
+        }
         mWifiPassLayout.setError(null);
-        if (!pass.isEmpty()) {
-            // remember it for auto-join, even if the drone isn't reachable right now
+        boolean online = mStatus.getText().toString().contains("·");
+        if (!pass.isEmpty() && !online) {
+            // Drone not reachable: remember it for auto-join next time.
             mPrefs.edit().putString(DroneNetwork.PREF_DRONE_PASSWORD, pass).apply();
+            toast(getString(R.string.wifi_saved_local));
         }
         runDrone(() -> {
             try {
@@ -282,10 +304,14 @@ public class DroneToolsActivity extends AppCompatActivity {
             } catch (java.io.UnsupportedEncodingException e) {
                 throw new DroneApi.ApiException(e.getMessage());
             }
-        }, json -> toast(getString(R.string.wifi_saved)));
-        if (!pass.isEmpty() && !mStatus.getText().toString().contains("·")) {
-            toast(getString(R.string.wifi_saved_local));
-        }
+        }, json -> {
+            // Only once the drone has accepted it, or auto-join would use a password
+            // the drone never took.
+            if (!pass.isEmpty()) {
+                mPrefs.edit().putString(DroneNetwork.PREF_DRONE_PASSWORD, pass).apply();
+            }
+            toast(getString(R.string.wifi_saved));
+        });
     }
 
     // ------------------------------------------------------------ firmware
@@ -323,6 +349,9 @@ public class DroneToolsActivity extends AppCompatActivity {
             mFwProgress.setVisibility(View.GONE);
             mFwResult.setText(R.string.fw_done);
             mMain.postDelayed(this::refreshStatus, 12000);
+        }, () -> {
+            mFwProgress.setVisibility(View.GONE);
+            mFwResult.setText("");
         });
     }
 

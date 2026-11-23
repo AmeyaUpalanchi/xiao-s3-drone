@@ -59,6 +59,14 @@ static uint32_t groundSinceTick = 0;
 static float outputThrust = 0.0f;
 static float heightM = -1.0f;
 static uint32_t idleSinceTick = 0;
+static bool batteryFailsafe = false;    // low battery landings can't be cancelled
+
+/* The web API runs in another task, on either core. It never writes `state`
+ * itself; it posts a request here and the stabilizer answers on its next tick,
+ * so a check-then-set can't race with the 1 kHz loop. */
+static volatile uint8_t serviceRequest = 0;
+static volatile int8_t serviceReply = 0;        // 1 granted, -1 refused
+static volatile uint32_t lastUpdateTick = 0;
 #ifdef CONFIG_DRONE_AUTO_ARM
 static volatile uint32_t autoArmBlockedUntil = 0;   // web tool in use: don't re-arm yet
 #define TOOL_HOLD_MS            15000
@@ -84,6 +92,7 @@ static void disarm(const char *why)
   landRequest = 0;
   pilotThrust = 0.0f;
   outputThrust = 0.0f;
+  batteryFailsafe = false;
 }
 
 static bool isFlying(const setpoint_t *sp)
@@ -121,12 +130,44 @@ static void levelAttitude(setpoint_t *sp)
   sp->attitudeRate.yaw = 0;
 }
 
+/* Stick at or below the middle in altitude hold, or throttle at zero. */
+static bool throttleIdle(const setpoint_t *sp)
+{
+  return sp->mode.z == modeVelocity ? (sp->velocity.z <= 0.05f) : (sp->thrust <= 0.0f);
+}
+
+/* Called from the stabilizer task only (or with the stabilizer stopped). */
+static bool grantService(const setpoint_t *sp)
+{
+#ifdef CONFIG_DRONE_AUTO_ARM
+  // iOS build arms itself whenever an app is connected; a web tool may still run
+  // while it sits idle on the ground. In altitude hold the thrust setpoint is 0
+  // even in a hover, so the height (via isFlying) has to say it's on the ground.
+  if (state == SAFETY_ARMED && outputThrust <= 0.0f && pilotThrust < MIN_FLYING_THRUST
+      && (sp == NULL || !isFlying(sp))) {
+    autoArmBlockedUntil = xTaskGetTickCount() + M2T(TOOL_HOLD_MS);
+    disarm("web tool");
+  }
+#endif
+  if (state != SAFETY_DISARMED || armRequest) {
+    return false;
+  }
+  state = SAFETY_SERVICE;
+  return true;
+}
+
 void flightSafetyUpdate(setpoint_t *sp)
 {
   bool linkLost = commanderGetInactivityTime() > M2T(LINK_LOST_MS);
   heightM = heightSensorPresent() ? rangeGet(rangeDown) / 1000.0f : -1.0f;
 
-  // Service mode (motor test / beeper) owns the motors; never arm meanwhile.
+  lastUpdateTick = xTaskGetTickCount();
+  if (serviceRequest) {
+    serviceReply = grantService(sp) ? 1 : -1;
+    serviceRequest = 0;
+  }
+
+  // Service mode (motor test / beeper / web tools) owns the motors; never arm meanwhile.
   if (state == SAFETY_SERVICE) {
     armRequest = 0;
     landRequest = 0;
@@ -146,7 +187,7 @@ void flightSafetyUpdate(setpoint_t *sp)
   // iOS build: the ESP-Drone App Store app never sends safety.armed. Arm while
   // an app is streaming setpoints with the throttle at zero; every disarm rule
   // below (app lost, idle on the ground, landed) still applies.
-  if (state == SAFETY_DISARMED && !linkLost && sp->thrust <= 0.0f
+  if (state == SAFETY_DISARMED && !linkLost && throttleIdle(sp)
       && (int32_t)(xTaskGetTickCount() - autoArmBlockedUntil) >= 0) {
     armRequest = 1;
   }
@@ -154,7 +195,7 @@ void flightSafetyUpdate(setpoint_t *sp)
 
   // 2. Arm / disarm requests.
   if (state == SAFETY_DISARMED) {
-    if (armRequest && sp->thrust <= 0.0f && !linkLost) {
+    if (armRequest && throttleIdle(sp) && !linkLost) {
       state = SAFETY_ARMED;
       idleSinceTick = 0;
       DEBUG_PRINTI("armed\n");
@@ -182,8 +223,7 @@ void flightSafetyUpdate(setpoint_t *sp)
           sp->thrust = 0.0f;
           return;
         }
-        bool idleStick = sp->mode.z == modeVelocity ? (sp->velocity.z <= 0.05f) : (sp->thrust <= 0.0f);
-        if (!idleStick) {
+        if (!throttleIdle(sp)) {
           idleSinceTick = now;
         } else if (T2M(now - idleSinceTick) > IDLE_DISARM_MS) {
           disarm("idle on the ground");
@@ -199,6 +239,7 @@ void flightSafetyUpdate(setpoint_t *sp)
         startLanding(SAFETY_FAILSAFE, sp);
       } else if (pmIsBatteryLow() && isFlying(sp)) {
         startLanding(SAFETY_FAILSAFE, sp);
+        batteryFailsafe = (state == SAFETY_FAILSAFE);
       }
       if (state == SAFETY_ARMED) {
         outputThrust = sp->thrust;
@@ -215,8 +256,12 @@ void flightSafetyUpdate(setpoint_t *sp)
       break;
 
     case SAFETY_FAILSAFE:
-      if (!linkLost && !pmIsBatteryLow() && !landRequest) {
-        state = SAFETY_ARMED;      // link is back: pilot takes over again
+      // Link is back: the pilot takes over again, but only once the app is
+      // really giving thrust. An app that still thinks it is landing sends 0,
+      // and handing that over mid-air would drop the drone.
+      if (!batteryFailsafe && !linkLost && !landRequest
+          && (sp->mode.z == modeVelocity || sp->thrust >= MIN_FLYING_THRUST)) {
+        state = SAFETY_ARMED;
         outputThrust = sp->thrust;
         return;
       }
@@ -273,23 +318,6 @@ bool flightSafetyMotorsAllowed(void)
   return state != SAFETY_DISARMED && state != SAFETY_SERVICE;
 }
 
-bool flightSafetyDisarmForTools(void)
-{
-  if (state == SAFETY_DISARMED) {
-    return true;
-  }
-#ifdef CONFIG_DRONE_AUTO_ARM
-  // iOS build arms itself whenever an app is connected; a web tool (motor test,
-  // level, Wi-Fi, firmware update) may still run while it sits idle on the ground.
-  if (state == SAFETY_ARMED && outputThrust <= 0.0f && pilotThrust < MIN_FLYING_THRUST) {
-    autoArmBlockedUntil = xTaskGetTickCount() + M2T(TOOL_HOLD_MS);
-    disarm("web tool");
-    return true;
-  }
-#endif
-  return false;
-}
-
 bool flightSafetyServiceActive(void)
 {
   return state == SAFETY_SERVICE;
@@ -297,16 +325,30 @@ bool flightSafetyServiceActive(void)
 
 bool flightSafetyBeginService(void)
 {
-  if (state != SAFETY_DISARMED || armRequest) {
+  // Normal case: the stabilizer answers within a tick or two.
+  serviceReply = 0;
+  serviceRequest = 1;
+  for (int i = 0; i < 50 && serviceReply == 0; i++) {
+    vTaskDelay(M2T(2));
+  }
+  if (serviceReply != 0) {
+    return serviceReply > 0;
+  }
+  // No answer: the stabilizer isn't running (e.g. no IMU found), so nothing
+  // else touches the state and it's safe to decide here.
+  serviceRequest = 0;
+  if ((int32_t)(xTaskGetTickCount() - lastUpdateTick) < (int32_t)M2T(50)) {
     return false;
   }
-  state = SAFETY_SERVICE;
-  return true;
+  return grantService(NULL);
 }
 
 void flightSafetyEndService(void)
 {
   if (state == SAFETY_SERVICE) {
+#ifdef CONFIG_DRONE_AUTO_ARM
+    autoArmBlockedUntil = xTaskGetTickCount() + M2T(TOOL_HOLD_MS);
+#endif
     state = SAFETY_DISARMED;
   }
 }

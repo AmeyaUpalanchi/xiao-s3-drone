@@ -40,6 +40,13 @@ def fail(msg):
     sys.exit(1)
 
 
+def ask(prompt):
+    try:
+        return input(prompt).strip()
+    except EOFError:
+        return ""
+
+
 def download(url, dest):
     req = urllib.request.Request(url, headers={"User-Agent": "tdc-installer"})
     with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
@@ -53,7 +60,10 @@ def check_sums(folder):
     for line in open(sums):
         digest, name = line.split(None, 1)
         name = name.strip().lstrip("*")
-        with open(os.path.join(folder, name), "rb") as f:
+        path = os.path.join(folder, name)
+        if not os.path.exists(path):
+            fail(name + " is missing from " + folder + ". Download the release again.")
+        with open(path, "rb") as f:
             if hashlib.sha256(f.read()).hexdigest() != digest:
                 fail("checksum mismatch for " + name + ". Download it again.")
 
@@ -236,10 +246,21 @@ def install_app(apk):
         say("\nSkipped. Copy " + apk + " to the phone and open it to install.")
         return
     serial_no = ready[0][0]
+    if len(ready) > 1:
+        say("More than one Android device is connected:")
+        for i, d in enumerate(ready, 1):
+            say("  %d. %s" % (i, d[0]))
+        pick = ask("Install on which one? [1-%d] " % len(ready))
+        if not pick.isdigit() or not 1 <= int(pick) <= len(ready):
+            fail("no device picked.")
+        serial_no = ready[int(pick) - 1][0]
     r = subprocess.run([adb, "-s", serial_no, "install", "-r", apk], capture_output=True, text=True)
     out = r.stdout + r.stderr
     if "INSTALL_FAILED_UPDATE_INCOMPATIBLE" in out or "signatures do not match" in out:
-        say("An older build of the app with a different signature is on the phone. Removing it...")
+        say("An older build of the app with a different signature is on the phone.")
+        say("It has to be removed first, which clears the app's saved settings.")
+        if ask("Remove it and install the new one? [y/N] ").lower() not in ("y", "yes"):
+            fail("app not installed. Uninstall the old app on the phone, then run this again.")
         subprocess.run([adb, "-s", serial_no, "uninstall", APP_ID], capture_output=True)
         r = subprocess.run([adb, "-s", serial_no, "install", apk], capture_output=True, text=True)
         out = r.stdout + r.stderr
@@ -265,8 +286,9 @@ def main():
     say("The Drone Community installer")
     if a.dir:
         version, fw_dir, apk = local_release(a.dir, a.ios)
-        if version.endswith("-ios"):
-            a.ios = True
+        # The folder decides the build; --ios inside the Android folder would flash
+        # Android firmware and then print the iPhone instructions.
+        a.ios = version.endswith("-ios")
         say("Using files in " + a.dir + " (version " + version + ")")
     else:
         version, fw_dir, apk = fetch_release(a.ios)
