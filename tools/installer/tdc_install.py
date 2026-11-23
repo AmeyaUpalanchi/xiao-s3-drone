@@ -11,7 +11,6 @@ import argparse
 import glob
 import hashlib
 import io
-import json
 import os
 import platform
 import shutil
@@ -61,29 +60,39 @@ def check_sums(folder):
 
 # ---------------------------------------------------------------- release files
 
+def latest_version():
+    # github.com/<repo>/releases/latest redirects to .../tag/v<version>. Unlike the API,
+    # this has no 60-requests-an-hour limit.
+    req = urllib.request.Request("https://github.com/%s/releases/latest" % REPO,
+                                 headers={"User-Agent": "tdc-installer"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            tag = r.geturl().rstrip("/").rsplit("/", 1)[-1]
+    except Exception as e:
+        fail("couldn't reach GitHub (%s). Check the internet connection." % e)
+    if not tag.startswith("v"):
+        fail("couldn't find the latest release on GitHub.")
+    return tag[1:]
+
+
 def fetch_release(ios):
     step("Getting the latest release from GitHub")
-    req = urllib.request.Request("https://api.github.com/repos/%s/releases/latest" % REPO,
-                                 headers={"User-Agent": "tdc-installer"})
-    rel = json.load(urllib.request.urlopen(req, timeout=30))
-    version = rel["tag_name"].lstrip("v")
+    version = latest_version()
     say("Version " + version)
-    assets = {a["name"]: a["browser_download_url"] for a in rel["assets"]}
+    base = "https://github.com/%s/releases/download/v%s/" % (REPO, version)
     work = tempfile.mkdtemp(prefix="tdc-")
     fw_name = "TheDroneCommunity-firmware-%s%s.zip" % (version, "-ios" if ios else "")
     apk_name = "TheDroneCommunity-%s.apk" % version
     for n in (fw_name, apk_name):
-        if n not in assets:
-            fail(n + " is missing from the release.")
-    say("Downloading " + fw_name)
-    download(assets[fw_name], os.path.join(work, fw_name))
+        say("Downloading " + n)
+        try:
+            download(base + n, os.path.join(work, n))
+        except Exception as e:
+            fail("download of %s failed (%s)." % (n, e))
     with zipfile.ZipFile(os.path.join(work, fw_name)) as z:
         z.extractall(work)
     fw_dir = os.path.join(work, fw_name[:-4])
-    say("Downloading " + apk_name)
-    apk = os.path.join(work, apk_name)
-    download(assets[apk_name], apk)
-    return version, fw_dir, apk
+    return version, fw_dir, os.path.join(work, apk_name)
 
 
 def local_release(d, ios):
